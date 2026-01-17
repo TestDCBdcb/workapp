@@ -36,7 +36,7 @@
       font-family: system-ui, -apple-system, sans-serif;
       min-height: 100vh;
       padding: 16px;
-      padding-bottom: 100px;
+      padding-bottom: 120px;
     }
 
     .container { max-width: 600px; margin: 0 auto; }
@@ -131,6 +131,45 @@
 
     #orders-list { margin-top: 32px; display: none; }
 
+    #analytics-section { 
+      margin-top: 32px; 
+      display: none; 
+      padding: 20px; 
+      background: var(--card); 
+      border-radius: 20px; 
+    }
+
+    .analytics-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .analytics-item:last-child {
+      border-bottom: none;
+    }
+
+    .analytics-label {
+      font-size: 18px;
+      color: var(--text);
+    }
+
+    .analytics-value {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .analytics-total {
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid var(--accent);
+    }
+
     .bottom-panel {
       position: fixed;
       bottom: 0;
@@ -140,14 +179,14 @@
       box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
       padding: 12px 16px;
       display: flex;
-      gap: 12px;
+      gap: 8px;
       z-index: 1000;
     }
 
     .bottom-btn {
       flex: 1;
-      padding: 16px;
-      font-size: 18px;
+      padding: 14px;
+      font-size: 16px;
       font-weight: 600;
       border-radius: 16px;
       border: none;
@@ -178,11 +217,45 @@
     </div>
 
     <div id="orders-list"></div>
+
+    <div id="analytics-section">
+      <h2 style="text-align:center; margin-bottom:20px;">Аналитика заказов</h2>
+      <div id="analytics-content">
+        <div class="analytics-item">
+          <span class="analytics-label">Сумма в пути (оплаченные):</span>
+          <span class="analytics-value" id="in-transit-paid">0 ₽</span>
+        </div>
+        <div class="analytics-item">
+          <span class="analytics-label">Сумма в ПВЗ (оплаченные):</span>
+          <span class="analytics-value" id="in-pvz-paid">0 ₽</span>
+        </div>
+        <div class="analytics-item">
+          <span class="analytics-label">Сумма полученных:</span>
+          <span class="analytics-value" id="received-total">0 ₽</span>
+        </div>
+        <div class="analytics-item">
+          <span class="analytics-label">Сумма отправленных:</span>
+          <span class="analytics-value" id="sent-total">0 ₽</span>
+        </div>
+        <div class="analytics-item">
+          <span class="analytics-label">Сумма на складе маркета:</span>
+          <span class="analytics-value" id="market-warehouse-total">0 ₽</span>
+        </div>
+        <div class="analytics-item analytics-total">
+          <span class="analytics-label">Общая сумма:</span>
+          <span class="analytics-value" id="total-amount">0 ₽</span>
+        </div>
+        <div style="margin-top: 20px; color: var(--hint); font-size: 14px; text-align: center;">
+          * Учитываются только соответствующие статусы
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="bottom-panel">
     <button class="bottom-btn" onclick="startAddOrder()">Новый заказ</button>
     <button class="bottom-btn" onclick="toggleOrders()">Список</button>
+    <button class="bottom-btn" onclick="toggleAnalytics()">Аналитика</button>
   </div>
 
   <script>
@@ -381,6 +454,7 @@
       quantity = 1;
       document.getElementById('add-form').style.display = 'block';
       document.getElementById('orders-list').style.display = 'none';
+      document.getElementById('analytics-section').style.display = 'none';
       document.getElementById('status').textContent = '';
       renderStep();
       updateProgress();
@@ -484,9 +558,25 @@
 
     function toggleOrders() {
       const list = document.getElementById('orders-list');
+      const analytics = document.getElementById('analytics-section');
+      analytics.style.display = 'none';
       list.style.display = list.style.display === 'block' ? 'none' : 'block';
+      document.getElementById('add-form').style.display = 'none';
+      
       if (list.style.display === 'block') {
         getOrders();
+      }
+    }
+
+    function toggleAnalytics() {
+      const analytics = document.getElementById('analytics-section');
+      const list = document.getElementById('orders-list');
+      list.style.display = 'none';
+      document.getElementById('add-form').style.display = 'none';
+      analytics.style.display = analytics.style.display === 'block' ? 'none' : 'block';
+      
+      if (analytics.style.display === 'block') {
+        getAnalytics();
       }
     }
 
@@ -525,6 +615,33 @@
         list.innerHTML = html;
       } catch (err) {
         list.innerHTML = '<p style="color:red; text-align:center;">Ошибка загрузки</p>';
+      }
+    }
+
+    async function getAnalytics() {
+      const analyticsContent = document.getElementById('analytics-content');
+      analyticsContent.innerHTML = '<p style="text-align:center; color:var(--hint);">Загрузка аналитики...</p>';
+
+      try {
+        const res = await fetch('/api/analytics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData })
+        });
+
+        if (!res.ok) throw new Error('Ошибка загрузки аналитики');
+
+        const data = await res.json();
+
+        document.getElementById('in-transit-paid').textContent = data.inTransitPaid + ' ₽';
+        document.getElementById('in-pvz-paid').textContent = data.inPvzPaid + ' ₽';
+        document.getElementById('received-total').textContent = data.receivedTotal + ' ₽';
+        document.getElementById('sent-total').textContent = data.sentTotal + ' ₽';
+        document.getElementById('market-warehouse-total').textContent = data.marketWarehouseTotal + ' ₽';
+        document.getElementById('total-amount').textContent = data.totalAmount + ' ₽';
+
+      } catch (err) {
+        analyticsContent.innerHTML = '<p style="color:red; text-align:center;">Ошибка загрузки аналитики</p>';
       }
     }
   </script>
