@@ -7,124 +7,167 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --tg-theme-bg-color: #ffffff;
-      --tg-theme-text-color: #000000;
-      --tg-theme-hint-color: #888888;
-      --tg-theme-button-color: #0088cc;
-      --tg-theme-button-text-color: #ffffff;
-      --tg-theme-section-bg-color: #f5f5f5;
-      --wb-color: #7b2cbf;
-      --ozon-color: #005bff;
-      --avito-color: #00cc66;
-      --ym-color: #ffcc00;
-      --aliexpress-color: #ff6600;
+      --bg: #ffffff;
+      --text: #000000;
+      --hint: #888888;
+      --accent: #0088cc;
+      --card: #f8f9fa;
+      --wb: #7b2cbf;
+      --ozon: #005bff;
+      --avito: #00cc66;
+      --ym: #ffcc00;
+      --aliexpress: #ff6600;
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --tg-theme-bg-color: #0f1621;
-        --tg-theme-text-color: #e0e0e0;
-        --tg-theme-hint-color: #9ca3af;
-        --tg-theme-section-bg-color: #1a2332;
+        --bg: #0f1621;
+        --text: #e0e0e0;
+        --hint: #9ca3af;
+        --card: #1a2332;
       }
     }
 
+    * { margin:0; padding:0; box-sizing:border-box; }
+
     body {
-      margin: 0;
-      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
       font-family: system-ui, -apple-system, sans-serif;
-      background: var(--tg-theme-bg-color);
-      color: var(--tg-theme-text-color);
       min-height: 100vh;
+      padding: 16px;
     }
 
-    .container { max-width: 900px; margin: 0 auto; }
-    h1 { margin: 0 0 16px; font-size: 24px; }
-    .greeting { margin-bottom: 20px; color: var(--tg-theme-hint-color); }
+    .container { max-width: 600px; margin: 0 auto; }
 
-    .step-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 24px 0 12px;
-    }
-
-    .button-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .choice-btn {
-      padding: 14px 20px;
-      font-size: 16px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      text-align: left;
+    header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: var(--tg-theme-section-bg-color);
-      color: var(--tg-theme-text-color);
-      transition: background 0.15s;
+      margin-bottom: 24px;
     }
 
-    .choice-btn:hover { background: rgba(0,136,204,0.15); }
-    .choice-btn.active { background: var(--tg-theme-button-color); color: white; }
+    .back-btn {
+      background: none;
+      border: none;
+      font-size: 32px;
+      color: var(--accent);
+      cursor: pointer;
+      padding: 8px;
+      margin-right: 16px;
+    }
+
+    .progress {
+      flex: 1;
+      height: 6px;
+      background: rgba(0,0,0,0.08);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .step-title {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 24px 0 20px;
+      text-align: center;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 16px;
+      font-size: 20px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      user-select: none;
+    }
+
+    .card:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
 
     .color-dot {
-      width: 20px;
-      height: 20px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       flex-shrink: 0;
     }
 
-    input, textarea, select {
+    input, textarea {
       width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      border-radius: 10px;
+      padding: 18px;
+      font-size: 18px;
+      border-radius: 16px;
       border: 1px solid #ccc;
-      font-size: 16px;
-      background: var(--tg-theme-section-bg-color);
-      color: var(--tg-theme-text-color);
+      background: var(--card);
+      color: var(--text);
+      margin: 12px 0;
     }
 
     #status {
-      margin: 16px 0;
-      color: var(--tg-theme-hint-color);
-      font-size: 14px;
+      margin: 24px 0;
+      color: var(--hint);
+      font-size: 15px;
+      text-align: center;
     }
+
+    #add-form { display: none; }
 
     #orders-list { margin-top: 32px; }
   </style>
 </head>
 <body>
   <div class="container">
+    <header>
+      <button class="back-btn" onclick="goBack()" id="backBtn" style="visibility:hidden;">←</button>
+      <div class="progress">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+    </header>
+
     <h1>Мои заказы</h1>
-    <div class="greeting">Привет, <span id="user">загружаю...</span>!</div>
 
-    <button class="choice-btn" onclick="startAddOrder()" style="width:100%; margin-bottom:24px;">
-      ➕ Добавить новый заказ
-    </button>
+    <div class="card" onclick="startAddOrder()" style="justify-content:center; font-size:22px; font-weight:600;">
+      ➕ Добавить заказ
+    </div>
 
-    <div id="add-form" style="display:none;">
-      <div class="step-title" id="step-title">Шаг 1</div>
-      <div id="current-step"></div>
-      <button id="next-btn" onclick="nextStep()" style="margin-top:16px; width:100%;">Далее</button>
+    <div id="add-form">
+      <div class="step-title" id="stepTitle"></div>
+      <div id="currentStep"></div>
       <div id="status"></div>
     </div>
 
-    <button onclick="getOrders()" id="load-btn" style="margin-top:32px; width:100%;">Обновить список заказов</button>
-    <div id="orders-list"></div>
+    <div class="card" onclick="getOrders()" style="justify-content:center; font-weight:600; margin-top:32px;">
+      Обновить список
+    </div>
+
+    <div id="orders-list" style="margin-top:32px;"></div>
   </div>
 
   <script>
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
-
-    document.getElementById('user').textContent = tg.initDataUnsafe?.user?.first_name || 'пользователь';
 
     function applyTheme() {
       document.body.style.background = tg.backgroundColor;
@@ -149,19 +192,13 @@
             { name: 'Aliexpress', color: 'var(--aliexpress-color)' },
             { name: 'Другое', color: '#888888' }
           ];
-          let html = '<div class="button-group">';
-          shops.forEach(s => {
-            html += `
-              <button class="choice-btn ${orderData.shop === s.name ? 'active' : ''}" 
-                      onclick="selectShop('${s.name}')">
-                <div class="color-dot" style="background:${s.color}"></div>
-                ${s.name}
-              </button>`;
-          });
-          html += '</div>';
-          return html;
-        },
-        validate: () => !!orderData.shop
+          return shops.map(s => `
+            <div class="card" onclick="selectValue('shop', '${s.name}')">
+              <div class="color-dot" style="background:${s.color}"></div>
+              ${s.name}
+            </div>
+          `).join('');
+        }
       },
 
       {
@@ -169,14 +206,17 @@
         render: () => {
           if (orderData.shop === 'Wildberries') {
             orderData.orderNumber = '';
-            return '<p style="color:#888;">Для Wildberries не нужен</p>';
+            nextStep();
+            return '';
           }
-          return `<input type="text" id="order-num" placeholder="Номер заказа" value="${orderData.orderNumber || ''}">`;
+          return `
+            <input type="text" id="orderNum" placeholder="Номер заказа" value="${orderData.orderNumber || ''}" autofocus>
+            <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
+          `;
         },
-        validate: () => orderData.shop === 'Wildberries' || !!document.getElementById('order-num')?.value.trim(),
         save: () => {
           if (orderData.shop !== 'Wildberries') {
-            orderData.orderNumber = document.getElementById('order-num')?.value.trim() || '';
+            orderData.orderNumber = document.getElementById('orderNum')?.value.trim() || '';
           }
         }
       },
@@ -185,22 +225,20 @@
         title: 'Аккаунт',
         render: () => {
           const accs = ['Артем','Лиза','Роберт','Максим','Мама','Миша','Кунак','Другое'];
-          let html = '<div class="button-group">';
-          accs.forEach(a => {
-            html += `
-              <button class="choice-btn ${orderData.account === a ? 'active' : ''}" 
-                      onclick="selectAccount('${a}')">${a}</button>`;
-          });
-          html += '</div>';
+          let html = accs.map(a => `
+            <div class="card" onclick="selectValue('account', '${a}')">${a}</div>
+          `).join('');
           if (orderData.account === 'Другое') {
-            html += `<input type="text" id="acc-other" placeholder="Введите аккаунт" value="${orderData.accountOther || ''}" style="margin-top:12px;">`;
+            html += `
+              <input type="text" id="accOther" placeholder="Введите аккаунт" value="${orderData.accountOther || ''}" autofocus>
+              <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
+            `;
           }
           return html;
         },
-        validate: () => !!orderData.account && (orderData.account !== 'Другое' || !!orderData.accountOther),
         save: () => {
           if (orderData.account === 'Другое') {
-            orderData.account = document.getElementById('acc-other')?.value.trim() || 'Другое';
+            orderData.account = document.getElementById('accOther')?.value.trim() || 'Другое';
           }
         }
       },
@@ -210,29 +248,21 @@
         render: () => {
           const today = new Date().toISOString().split('T')[0];
           const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-          let html = '<div class="button-group">';
-          html += `<button class="choice-btn ${orderData.date === today ? 'active' : ''}" onclick="selectDate('${today}')">Сегодня</button>`;
-          html += `<button class="choice-btn ${orderData.date === yesterday ? 'active' : ''}" onclick="selectDate('${yesterday}')">Вчера</button>`;
-          html += `<button class="choice-btn ${orderData.date === 'other' ? 'active' : ''}" onclick="selectDate('other')">Другое</button>`;
-          html += '</div>';
-          if (orderData.date === 'other') {
-            html += `<input type="date" id="date-other" value="${orderData.dateOther || today}">`;
-          }
-          return html;
-        },
-        validate: () => !!orderData.date && (orderData.date !== 'other' || !!orderData.dateOther),
-        save: () => {
-          if (orderData.date === 'other') {
-            orderData.date = document.getElementById('date-other')?.value || new Date().toISOString().split('T')[0];
-          }
+          return `
+            <div class="card" onclick="selectValue('date', '${today}')">Сегодня</div>
+            <div class="card" onclick="selectValue('date', '${yesterday}')">Вчера</div>
+            <div class="card" onclick="selectValue('date', 'other')">Другое (выбрать дату)</div>
+          `;
         }
       },
 
       {
         title: 'Позиция (товар)',
-        render: () => `<input type="text" id="position" placeholder="Название товара" value="${orderData.position || ''}">`,
-        validate: () => !!document.getElementById('position')?.value.trim(),
-        save: () => orderData.position = document.getElementById('position').value.trim()
+        render: () => `
+          <input type="text" id="position" placeholder="Название товара" value="${orderData.position || ''}" autofocus>
+          <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
+        `,
+        save: () => orderData.position = document.getElementById('position')?.value.trim() || ''
       },
 
       {
@@ -255,22 +285,21 @@
             addrs = ['Другое'];
           }
 
-          let html = '<div class="button-group">';
+          let html = '';
           addrs.forEach(a => {
-            html += `
-              <button class="choice-btn ${orderData.pvz === a ? 'active' : ''}" 
-                      onclick="selectPvz('${a}')">${a}</button>`;
+            html += `<div class="card" onclick="selectValue('pvz', '${a}')">${a}</div>`;
           });
-          html += '</div>';
           if (orderData.pvz === 'Другое') {
-            html += `<input type="text" id="pvz-other" placeholder="Введите адрес" value="${orderData.pvzOther || ''}" style="margin-top:12px;">`;
+            html += `
+              <input type="text" id="pvzOther" placeholder="Введите адрес" value="${orderData.pvzOther || ''}" autofocus>
+              <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
+            `;
           }
           return html;
         },
-        validate: () => !!orderData.pvz && (orderData.pvz !== 'Другое' || !!orderData.pvzOther),
         save: () => {
           if (orderData.pvz === 'Другое') {
-            orderData.pvz = document.getElementById('pvz-other')?.value.trim() || 'Другое';
+            orderData.pvz = document.getElementById('pvzOther')?.value.trim() || 'Другое';
           }
         }
       },
@@ -279,52 +308,48 @@
         title: 'Оплата',
         render: () => {
           const opts = ['Оплачен', 'При получении'];
-          let html = '<div class="button-group">';
-          opts.forEach(o => {
-            html += `<button class="choice-btn ${orderData.payment === o ? 'active' : ''}" onclick="selectPayment('${o}')">${o}</button>`;
-          });
-          html += '</div>';
-          return html;
-        },
-        validate: () => !!orderData.payment,
-        save: () => {}
+          return opts.map(o => `
+            <div class="card" onclick="selectValue('payment', '${o}')">${o}</div>
+          `).join('');
+        }
       },
 
       {
         title: 'Цена за 1 шт (₽)',
-        render: () => `<input type="number" id="price" min="1" step="0.01" placeholder="Цена" value="${orderData.price || ''}">`,
-        validate: () => {
-          const v = parseFloat(document.getElementById('price')?.value);
-          return !isNaN(v) && v > 0;
-        },
-        save: () => orderData.price = parseFloat(document.getElementById('price').value)
+        render: () => `
+          <input type="number" id="price" min="1" step="0.01" placeholder="Цена" value="${orderData.price || ''}" autofocus>
+          <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
+        `,
+        save: () => orderData.price = parseFloat(document.getElementById('price')?.value) || 0
       },
 
       {
         title: 'Количество штук',
-        render: () => `<input type="number" id="quantity" min="1" placeholder="Количество" value="${quantity}">`,
-        validate: () => {
-          const v = parseInt(document.getElementById('quantity')?.value);
-          return !isNaN(v) && v >= 1;
-        },
-        save: () => quantity = parseInt(document.getElementById('quantity').value)
+        render: () => `
+          <input type="number" id="quantity" min="1" placeholder="Количество" value="${quantity}" autofocus>
+          <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
+        `,
+        save: () => quantity = parseInt(document.getElementById('quantity')?.value || 1)
       },
 
       {
-        title: 'Подтверждение',
+        title: 'Подтвердить',
         render: () => `
-          <p><b>Магазин:</b> ${orderData.shop}</p>
-          <p><b>Аккаунт:</b> ${orderData.account}</p>
-          <p><b>Дата:</b> ${orderData.date}</p>
-          <p><b>Товар:</b> ${orderData.position}</p>
-          <p><b>ПВЗ:</b> ${orderData.pvz}</p>
-          <p><b>Оплата:</b> ${orderData.payment}</p>
-          <p><b>Цена за шт:</b> ${orderData.price} ₽</p>
-          <p><b>Количество:</b> ${quantity} шт</p>
-          <p><b>Итого сумма:</b> ${(orderData.price * quantity).toFixed(2)} ₽</p>
-        `,
-        validate: () => true,
-        isConfirm: true
+          <div style="padding:20px; background:var(--card); border-radius:16px; margin-bottom:24px;">
+            <p><b>Магазин:</b> ${orderData.shop}</p>
+            <p><b>Аккаунт:</b> ${orderData.account}</p>
+            <p><b>Дата:</b> ${orderData.date}</p>
+            <p><b>Товар:</b> ${orderData.position}</p>
+            <p><b>ПВЗ:</b> ${orderData.pvz}</p>
+            <p><b>Оплата:</b> ${orderData.payment}</p>
+            <p><b>Цена за шт:</b> ${orderData.price} ₽</p>
+            <p><b>Количество:</b> ${quantity} шт</p>
+            <p><b>Сумма за строку:</b> ${(orderData.price || 0).toFixed(2)} ₽</p>
+          </div>
+          <div class="card" onclick="addOrderToSheets()" style="justify-content:center; font-weight:600; font-size:20px;">
+            Добавить в таблицу
+          </div>
+        `
       }
     ];
 
@@ -332,48 +357,44 @@
       orderData = {};
       currentStep = 0;
       quantity = 1;
+      history = [];
       document.getElementById('add-form').style.display = 'block';
-      renderCurrentStep();
+      renderStep();
+      updateProgress();
+      document.getElementById('backBtn').style.visibility = 'hidden';
     }
 
-    function renderCurrentStep() {
+    function renderStep() {
       const step = steps[currentStep];
-      document.getElementById('step-title').textContent = step.title;
-      document.getElementById('current-step').innerHTML = step.render();
-
-      const nextBtn = document.getElementById('next-btn');
-      nextBtn.textContent = currentStep === steps.length - 1 ? 'Добавить в таблицу' : 'Далее';
+      document.getElementById('stepTitle').textContent = step.title;
+      document.getElementById('currentStep').innerHTML = step.render ? step.render() : '';
+      document.getElementById('backBtn').style.visibility = currentStep > 0 ? 'visible' : 'hidden';
     }
 
-    window.selectShop = function(name) { orderData.shop = name; renderCurrentStep(); };
-    window.selectAccount = function(acc) { orderData.account = acc; renderCurrentStep(); };
-    window.selectDate = function(d) { orderData.date = d; renderCurrentStep(); };
-    window.selectPvz = function(a) { orderData.pvz = a; renderCurrentStep(); };
-    window.selectPayment = function(o) { orderData.payment = o; renderCurrentStep(); };
+    function updateProgress() {
+      const percent = ((currentStep + 1) / steps.length) * 100;
+      document.getElementById('progressBar').style.width = percent + '%';
+    }
 
-    function nextStep() {
-      const step = steps[currentStep];
-      if (step.save) step.save();
-
-      if (!step.validate()) {
-        document.getElementById('status').textContent = 'Заполните корректно';
-        return;
-      }
-
-      document.getElementById('status').textContent = '';
-
-      if (currentStep < steps.length - 1) {
-        currentStep++;
-        renderCurrentStep();
-      } else {
-        addOrderToSheets();
+    function goBack() {
+      if (currentStep > 0) {
+        currentStep--;
+        renderStep();
+        updateProgress();
       }
     }
+
+    window.selectValue = function(field, value) {
+      orderData[field] = value;
+      currentStep++;
+      renderStep();
+      updateProgress();
+    };
 
     async function addOrderToSheets() {
       const status = document.getElementById('status');
       status.textContent = `Добавление ${quantity} строк...`;
-      document.getElementById('next-btn').disabled = true;
+      document.querySelector('.card[onclick="addOrderToSheets()"]').style.pointerEvents = 'none';
 
       try {
         const price = parseFloat(orderData.price);
@@ -405,59 +426,54 @@
           })
         });
 
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`Ошибка сервера: ${res.status} — ${errText}`);
-        }
+        if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
 
-        const result = await res.json();
-        status.textContent = `Успешно добавлено ${result.count} строк!`;
+        status.textContent = `Успешно добавлено ${quantity} строк!`;
         document.getElementById('add-form').style.display = 'none';
         getOrders();
       } catch (err) {
         console.error(err);
         status.textContent = 'Ошибка: ' + err.message;
       } finally {
-        document.getElementById('next-btn').disabled = false;
+        document.querySelector('.card[onclick="addOrderToSheets()"]').style.pointerEvents = 'auto';
       }
     }
 
     async function getOrders() {
-      const status = document.getElementById('status');
       const list = document.getElementById('orders-list');
-      status.textContent = 'Загрузка заказов...';
-      list.innerHTML = '';
+      list.innerHTML = '<p style="text-align:center; color:var(--hint);">Загрузка...</p>';
 
       try {
-        const response = await fetch('/api/orders', {
+        const res = await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ initData: tg.initData })
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!res.ok) throw new Error('Ошибка загрузки');
 
-        const data = await response.json();
+        const data = await res.json();
 
         if (!data.orders || data.orders.length === 0) {
-          status.textContent = 'Заказов пока нет';
+          list.innerHTML = '<p style="text-align:center; color:var(--hint);">Заказов пока нет</p>';
           return;
         }
 
         let html = '';
         data.orders.forEach(order => {
           html += `
-            <div style="background:#f8f9fa; padding:12px; border-radius:10px; margin-bottom:12px;">
-              <strong>${order['Дата заказа'] || '—'}</strong> — ${order.Позиция || '—'}<br>
-              Сумма: ${order.Сумма || '—'} ₽ | Покупатель: ${order.Покупатель || '—'}<br>
-              Магазин: ${order.Магазин || '—'}
-            </div>`;
+            <div class="card">
+              <div>
+                <strong>${order['Дата заказа'] || '—'}</strong><br>
+                ${order.Позиция || '—'}<br>
+                Сумма: ${order.Сумма || '—'} ₽
+              </div>
+            </div>
+          `;
         });
-
         list.innerHTML = html;
-        status.textContent = `Найдено: ${data.orders.length}`;
       } catch (err) {
-        status.textContent = 'Ошибка загрузки: ' + err.message;
+        list.innerHTML = '<p style="color:red; text-align:center;">Ошибка загрузки</p>';
       }
     }
   </script>
