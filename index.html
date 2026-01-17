@@ -71,12 +71,7 @@
       transition: width 0.4s ease;
     }
 
-    h1 {
-      font-size: 26px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      text-align: center;
-    }
+    h1 { font-size: 26px; font-weight: 600; margin-bottom: 8px; text-align: center; }
 
     .step-title {
       font-size: 22px;
@@ -357,7 +352,6 @@
       orderData = {};
       currentStep = 0;
       quantity = 1;
-      history = [];
       document.getElementById('add-form').style.display = 'block';
       renderStep();
       updateProgress();
@@ -369,6 +363,12 @@
       document.getElementById('stepTitle').textContent = step.title;
       document.getElementById('currentStep').innerHTML = step.render ? step.render() : '';
       document.getElementById('backBtn').style.visibility = currentStep > 0 ? 'visible' : 'hidden';
+
+      // Автофокус на input, если есть
+      const input = document.querySelector('input[autofocus]');
+      if (input) {
+        setTimeout(() => input.focus(), 100);
+      }
     }
 
     function updateProgress() {
@@ -391,13 +391,22 @@
       updateProgress();
     };
 
+    function nextStep() {
+      const step = steps[currentStep];
+      if (step.save) step.save();
+
+      currentStep++;
+      renderStep();
+      updateProgress();
+    }
+
     async function addOrderToSheets() {
       const status = document.getElementById('status');
       status.textContent = `Добавление ${quantity} строк...`;
       document.querySelector('.card[onclick="addOrderToSheets()"]').style.pointerEvents = 'none';
 
       try {
-        const price = parseFloat(orderData.price);
+        const price = parseFloat(orderData.price) || 0;
         const singleSum = price.toFixed(2);
 
         const rows = [];
@@ -426,9 +435,10 @@
           })
         });
 
-        if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
+        if (!res.ok) throw new Error(`Сервер: ${res.status}`);
 
-        status.textContent = `Успешно добавлено ${quantity} строк!`;
+        const result = await res.json();
+        status.textContent = `Успешно добавлено ${result.count} строк!`;
         document.getElementById('add-form').style.display = 'none';
         getOrders();
       } catch (err) {
