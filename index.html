@@ -379,8 +379,9 @@
         const price = parseFloat(orderData.price);
         const fullSum = (price * quantity).toFixed(2);
 
+        const rows = [];
         for (let i = 0; i < quantity; i++) {
-          const row = {
+          rows.push({
             Магазин: orderData.shop,
             'Номер заказа': orderData.orderNumber || '',
             Аккаунт: orderData.account,
@@ -392,41 +393,34 @@
             'Цена товара': price,
             Количество: 1,
             Сумма: i === 0 ? fullSum : price.toFixed(2),
-          };
-
-          const res = await fetch('/api/add-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              initData: tg.initData,
-              data: row
-            })
           });
+        }
 
-          if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`Ошибка на строке ${i+1}: ${res.status} — ${errText}`);
-          }
+        const res = await fetch('/api/add-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            initData: tg.initData,
+            rows: rows
+          })
+        });
 
-          // Задержка 400 мс между добавлениями — решает проблему "залипания" на одной строке
-          await new Promise(resolve => setTimeout(resolve, 400));
-
-          console.log(`Строка ${i+1}/${quantity} отправлена`);
+        if (!res.ok) {
+          throw new Error(`Ошибка: ${res.status}`);
         }
 
         status.textContent = `Успешно добавлено ${quantity} строк!`;
         document.getElementById('add-form').style.display = 'none';
-        getOrders(); // обновляем список
+        getOrders();
       } catch (err) {
         console.error(err);
-        status.textContent = 'Ошибка при добавлении: ' + err.message;
+        status.textContent = 'Ошибка: ' + err.message;
       } finally {
         document.getElementById('next-btn').disabled = false;
       }
     }
 
-    // Функция загрузки заказов — вставьте сюда ваш актуальный код getOrders()
-    // Если нужно — вот пример базовой версии (замените на свою, если отличается):
+    // Функция getOrders (замените на ваш актуальный код, если нужно)
     async function getOrders() {
       const status = document.getElementById('status');
       const list = document.getElementById('orders-list');
