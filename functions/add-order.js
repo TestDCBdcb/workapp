@@ -49,7 +49,12 @@ exports.handler = async (event) => {
   }
 
   try {
-    const sheet = (await getDoc()).sheetsByIndex[0];
+    const doc = await getDoc();
+    const sheet = doc.sheetsByIndex[0];
+
+    // Загружаем информацию о листе, чтобы получить актуальное количество строк
+    await sheet.loadCells('A1:Z1');
+    await sheet.loadHeaderRow(); // Загружаем заголовки
 
     const body = JSON.parse(event.body || '{}');
     const { initData, rows } = body;
@@ -69,15 +74,55 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: 'Invalid initData signature' };
     }
 
-    // Самый простой и надёжный способ — добавляем строки в конец таблицы
-    await sheet.addRows(rows);
-
-    console.log(`Успешно добавлено ${rows.length} строк в конец таблицы`);
+    // Получаем текущие строки, чтобы понять, где последняя заполненная строка
+    const currentRows = await sheet.getRows();
+    console.log(`Текущее количество строк: ${currentRows.length}`);
+    
+    // Начинаем вставку после последней строки
+    const startRowIndex = currentRows.length + 1; // +1 потому что заголовок в строке 1
+    
+    // Подготавливаем данные для вставки
+    const valuesToInsert = rows.map(row => [
+      row['Магазин'] || '',
+      row['Номер заказа'] || '',
+      row['Аккаунт'] || '',
+      row['Дата заказа'] || '',
+      row['Позиция'] || '',
+      row['Адрес ПВЗ'] || '',
+      row['Статус'] || 'В пути',
+      row['Оплата'] || '',
+      row['Цена товара'] || 0,
+      row['Количество'] || 1,
+      row['Сумма'] || 0
+    ]);
+    
+    // Определяем диапазон для вставки
+    const startRow = startRowIndex + 1; // +1 потому что sheet.getRows() возвращает строки без заголовка
+    const endRow = startRow + rows.length - 1;
+    
+    // Вставляем строки с использованием setValuesInRange
+    await sheet.loadCells(`A${startRow}:K${endRow}`);
+    
+    // Заполняем ячейки
+    for (let i = 0; i < rows.length; i++) {
+      const rowData = valuesToInsert[i];
+      const rowNum = startRow + i;
+      
+      for (let col = 0; col < rowData.length; col++) {
+        const cell = sheet.getCell(rowNum - 1, col); // -1 потому что нумерация с 0
+        cell.value = rowData[col];
+      }
+    }
+    
+    // Сохраняем изменения
+    await sheet.saveUpdatedCells();
+    
+    console.log(`Успешно добавлено ${rows.length} строк, начиная со строки ${startRow}`);
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ success: true, count: rows.length })
+      body: JSON.stringify({ success: true, count: rows.length, startRow })
     };
   } catch (err) {
     console.error('Ошибка add-order:', err.message, err.stack);
