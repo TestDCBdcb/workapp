@@ -659,16 +659,16 @@
       updateProgress();
     };
 
-    function nextStep() {
+    window.nextStep = function() {
       const step = steps[currentStep];
       if (step.save) step.save();
 
       currentStep++;
       renderStep();
       updateProgress();
-    }
+    };
 
-    async function addOrderToSheets() {
+    window.addOrderToSheets = async function() {
       const status = document.getElementById('status');
       status.textContent = `Добавление ${quantity} строк...`;
       const confirmCard = document.querySelector('.card[onclick="addOrderToSheets()"]');
@@ -719,9 +719,9 @@
       } finally {
         if (confirmCard) confirmCard.style.pointerEvents = 'auto';
       }
-    }
+    };
 
-    function toggleOrders() {
+    window.toggleOrders = function() {
       const list = document.getElementById('orders-list');
       const analytics = document.getElementById('analytics-section');
       analytics.style.display = 'none';
@@ -731,9 +731,9 @@
       if (list.style.display === 'block') {
         showStatusSelection();
       }
-    }
+    };
 
-    function toggleAnalytics() {
+    window.toggleAnalytics = function() {
       const analytics = document.getElementById('analytics-section');
       const list = document.getElementById('orders-list');
       list.style.display = 'none';
@@ -743,64 +743,9 @@
       if (analytics.style.display === 'block') {
         getAnalytics();
       }
-    }
+    };
 
-    async function showStatusSelection() {
-      const statusSelection = document.getElementById('status-selection');
-      const statusDetails = document.getElementById('status-details');
-      statusSelection.style.display = 'block';
-      statusDetails.style.display = 'none';
-      statusSelection.innerHTML = '<p style="text-align:center; color:var(--hint);">Загрузка статусов...</p>';
-      document.getElementById('backBtn').style.visibility = 'hidden';
-
-      try {
-        const res = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ initData: tg.initData })
-        });
-
-        if (!res.ok) throw new Error('Ошибка загрузки');
-
-        const data = await res.json();
-        allOrders = data.orders || [];
-
-        if (!allOrders || allOrders.length === 0) {
-          statusSelection.innerHTML = '<p style="text-align:center; color:var(--hint);">Заказов пока нет</p>';
-          return;
-        }
-
-        // Группируем заказы по статусам
-        const statusGroups = {};
-        allOrders.forEach(order => {
-          const status = order['Статус'] || 'Без статуса';
-          if (!statusGroups[status]) {
-            statusGroups[status] = [];
-          }
-          statusGroups[status].push(order);
-        });
-
-        let html = '<div class="step-title">Выберите статус</div>';
-        
-        // Создаем карточки для каждого статуса
-        Object.entries(statusGroups).forEach(([status, orders]) => {
-          const count = orders.length;
-          html += `
-            <div class="card status-card" onclick="showStatusDetails('${status}')">
-              <div>${status}</div>
-              <div class="status-count">${count}</div>
-            </div>
-          `;
-        });
-
-        statusSelection.innerHTML = html;
-
-      } catch (err) {
-        statusSelection.innerHTML = '<p style="color:red; text-align:center;">Ошибка загрузки</p>';
-      }
-    }
-
-    function showStatusDetails(status) {
+    window.showStatusDetails = function(status) {
       currentStatusView = status;
       const statusSelection = document.getElementById('status-selection');
       const statusDetails = document.getElementById('status-details');
@@ -1008,4 +953,202 @@
         if (totalPaidItems > 0) {
           html += `
             <div class="payment-group">
-              <div class="payment-title payment
+              <div class="payment-title payment-paid">
+                <span>Оплаченные</span>
+                <span>${totalPaidItems} шт. • ${totalPaidSum.toLocaleString('ru-RU')} ₽</span>
+              </div>
+          `;
+          
+          Object.entries(positionGroups.paid).forEach(([position, data]) => {
+            html += `
+              <div class="position-item">
+                <div class="position-name">${position}</div>
+                <div class="position-count">${data.count} шт.</div>
+                <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
+              </div>
+            `;
+          });
+          
+          html += `</div>`;
+        }
+
+        // Неоплаченные товары
+        if (totalUnpaidItems > 0) {
+          html += `
+            <div class="payment-group">
+              <div class="payment-title payment-unpaid">
+                <span>Неоплаченные</span>
+                <span>${totalUnpaidItems} шт. • ${totalUnpaidSum.toLocaleString('ru-RU')} ₽</span>
+              </div>
+          `;
+          
+          Object.entries(positionGroups.unpaid).forEach(([position, data]) => {
+            html += `
+              <div class="position-item">
+                <div class="position-name">${position}</div>
+                <div class="position-count">${data.count} шт.</div>
+                <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
+              </div>
+            `;
+          });
+          
+          html += `</div>`;
+        }
+      }
+
+      statusDetails.innerHTML = html;
+    };
+
+    window.toggleAnalyticsDetails = function() {
+      analyticsExpanded = !analyticsExpanded;
+      
+      const mainCard = document.getElementById('analytics-main-card');
+      const details = document.getElementById('analytics-details');
+      const arrow = document.getElementById('analytics-arrow');
+      
+      if (analyticsExpanded) {
+        mainCard.classList.add('expanded');
+        details.classList.add('expanded');
+        arrow.classList.add('expanded');
+      } else {
+        mainCard.classList.remove('expanded');
+        details.classList.remove('expanded');
+        arrow.classList.remove('expanded');
+      }
+    };
+
+    async function showStatusSelection() {
+      const statusSelection = document.getElementById('status-selection');
+      const statusDetails = document.getElementById('status-details');
+      statusSelection.style.display = 'block';
+      statusDetails.style.display = 'none';
+      statusSelection.innerHTML = '<p style="text-align:center; color:var(--hint);">Загрузка статусов...</p>';
+      document.getElementById('backBtn').style.visibility = 'hidden';
+
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData })
+        });
+
+        if (!res.ok) throw new Error('Ошибка загрузки');
+
+        const data = await res.json();
+        allOrders = data.orders || [];
+
+        if (!allOrders || allOrders.length === 0) {
+          statusSelection.innerHTML = '<p style="text-align:center; color:var(--hint);">Заказов пока нет</p>';
+          return;
+        }
+
+        // Группируем заказы по статусам
+        const statusGroups = {};
+        allOrders.forEach(order => {
+          const status = order['Статус'] || 'Без статуса';
+          if (!statusGroups[status]) {
+            statusGroups[status] = [];
+          }
+          statusGroups[status].push(order);
+        });
+
+        let html = '<div class="step-title">Выберите статус</div>';
+        
+        // Создаем карточки для каждого статуса
+        Object.entries(statusGroups).forEach(([status, orders]) => {
+          const count = orders.length;
+          html += `
+            <div class="card status-card" onclick="showStatusDetails('${status}')">
+              <div>${status}</div>
+              <div class="status-count">${count}</div>
+            </div>
+          `;
+        });
+
+        statusSelection.innerHTML = html;
+
+      } catch (err) {
+        statusSelection.innerHTML = '<p style="color:red; text-align:center;">Ошибка загрузки</p>';
+      }
+    }
+
+    async function getAnalytics() {
+      const analyticsContent = document.getElementById('analytics-content');
+      analyticsContent.innerHTML = '<p style="text-align:center; color:var(--hint);">Загрузка аналитики...</p>';
+
+      try {
+        const res = await fetch('/api/analytics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData })
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('Ошибка сервера:', res.status, errorText);
+          throw new Error(`Ошибка ${res.status}: ${errorText}`);
+        }
+
+        const data = await res.json();
+        console.log('Данные аналитики:', data);
+
+        // Проверяем, что все нужные поля присутствуют
+        if (data.inTransitPaid === undefined || data.inPvzPaid === undefined || 
+            data.receivedTotal === undefined || data.sentTotal === undefined || 
+            data.marketWarehouseTotal === undefined || data.totalAmount === undefined) {
+          throw new Error('Неполные данные от сервера');
+        }
+
+        // Создаем HTML для аналитики с выезжающими деталями
+        const analyticsHTML = `
+          <div class="analytics-main-card" id="analytics-main-card" onclick="toggleAnalyticsDetails()">
+            <div class="analytics-main-title">
+              Всего денег в товаре
+              <span class="arrow-icon" id="analytics-arrow">▼</span>
+            </div>
+            <div class="analytics-main-amount">${data.totalAmount} ₽</div>
+            <div class="analytics-main-subtitle">Нажмите для детализации</div>
+          </div>
+          <div class="analytics-details" id="analytics-details">
+            <div class="analytics-item">
+              <span class="analytics-label">В пути (оплаченные):</span>
+              <span class="analytics-value">${data.inTransitPaid} ₽</span>
+            </div>
+            <div class="analytics-item">
+              <span class="analytics-label">В ПВЗ (оплаченные):</span>
+              <span class="analytics-value">${data.inPvzPaid} ₽</span>
+            </div>
+            <div class="analytics-item">
+              <span class="analytics-label">Полученные:</span>
+              <span class="analytics-value">${data.receivedTotal} ₽</span>
+            </div>
+            <div class="analytics-item">
+              <span class="analytics-label">Отправленные:</span>
+              <span class="analytics-value">${data.sentTotal} ₽</span>
+            </div>
+            <div class="analytics-item">
+              <span class="analytics-label">На складе Маркета:</span>
+              <span class="analytics-value">${data.marketWarehouseTotal} ₽</span>
+            </div>
+            <div style="margin-top: 20px; color: var(--hint); font-size: 14px; text-align: center;">
+              * Учитываются только соответствующие статусы
+            </div>
+          </div>
+        `;
+
+        analyticsContent.innerHTML = analyticsHTML;
+        analyticsExpanded = false; // Сбрасываем состояние при загрузке
+
+      } catch (err) {
+        console.error('Ошибка загрузки аналитики:', err);
+        analyticsContent.innerHTML = `
+          <p style="color:red; text-align:center; padding:20px;">
+            Ошибка загрузки аналитики<br>
+            <small>${err.message}</small>
+          </p>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
