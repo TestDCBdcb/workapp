@@ -1,686 +1,158 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Заказы</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    :root {
-      --bg: #ffffff;
-      --text: #000000;
-      --hint: #888888;
-      --accent: #0088cc;
-      --card: #f8f9fa;
-      --wb: #7b2cbf;
-      --ozon: #005bff;
-      --avito: #00cc66;
-      --ym: #ffcc00;
-      --aliexpress: #ff6600;
+const { GoogleSpreadsheet } = require('google-spreadsheet');
+const { JWT } = require('google-auth-library');
+const crypto = require('crypto');
+
+// Кэш авторизации
+let doc = null;
+
+async function getDoc() {
+  if (doc) return doc;
+
+  try {
+    const auth = new JWT({
+      email: process.env.CLIENT_EMAIL,
+      key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n'),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+
+    doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID, auth);
+    await doc.loadInfo();
+    console.log('Google Sheets инициализирован');
+    return doc;
+  } catch (err) {
+    console.error('Ошибка инициализации doc:', err.message);
+    throw err;
+  }
+}
+
+function validateInitData(initData, botToken) {
+  const dataCheckString = Object.keys(initData)
+    .filter(key => key !== 'hash')
+    .sort()
+    .map(key => `${key}=${initData[key]}`)
+    .join('\n');
+
+  const secretKey = crypto.createHmac('sha256', 'WebAppData')
+    .update(botToken)
+    .digest();
+
+  const hash = crypto.createHmac('sha256', secretKey)
+    .update(dataCheckString)
+    .digest('hex');
+
+  return hash === initData.hash;
+}
+
+exports.handler = async (event) => {
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: 'Method Not Allowed' };
+  }
+
+  try {
+    const doc = await getDoc();
+    const sheet = doc.sheetsByIndex[0];
+
+    const body = JSON.parse(event.body || '{}');
+    const { initData } = body;
+
+    if (!initData) {
+      return { statusCode: 400, body: 'Missing initData' };
     }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0f1621;
-        --text: #e0e0e0;
-        --hint: #9ca3af;
-        --card: #1a2332;
+    // Валидация Telegram initData
+    const initDataObj = {};
+    initData.split('&').forEach(pair => {
+      const [key, value] = pair.split('=');
+      initDataObj[key] = decodeURIComponent(value);
+    });
+
+    if (!validateInitData(initDataObj, process.env.BOT_TOKEN)) {
+      return { statusCode: 403, body: 'Invalid initData signature' };
+    }
+
+    // Получаем все строки из таблицы
+    const rows = await sheet.getRows();
+    
+    // Инициализируем суммы
+    let inTransitPaid = 0;     // В пути (только оплаченные)
+    let inPvzPaid = 0;         // ПВЗ (только оплаченные)
+    let receivedTotal = 0;     // Получен (любая оплата)
+    let sentTotal = 0;         // Отправлен (любая оплата)
+    let marketWarehouseTotal = 0; // На складе Маркета (любая оплата)
+    let totalAmount = 0;       // Общая сумма
+
+    // Проходим по всем строкам и анализируем
+    rows.forEach(row => {
+      const status = (row.get('Статус') || '').toLowerCase().trim();
+      const payment = (row.get('Оплата') || '').toLowerCase().trim();
+      const sumStr = row.get('Сумма') || '0';
+      // Преобразуем строку в число, удаляя пробелы и заменяя запятые на точки
+      const sum = parseFloat(sumStr.toString().replace(/\s+/g, '').replace(',', '.')) || 0;
+
+      // Проверяем условия по вашим правилам:
+      
+      // 1. В пути (только если оплачен)
+      if (status.includes('в пути') && payment.includes('оплачен')) {
+        inTransitPaid += sum;
+        totalAmount += sum;
       }
-    }
-
-    * { margin:0; padding:0; box-sizing:border-box; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, sans-serif;
-      min-height: 100vh;
-      padding: 16px;
-      padding-bottom: 120px;
-    }
-
-    .container { max-width: 600px; margin: 0 auto; }
-
-    header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 24px;
-    }
-
-    .back-btn {
-      background: none;
-      border: none;
-      font-size: 32px;
-      color: var(--accent);
-      cursor: pointer;
-      padding: 8px;
-      margin-right: 16px;
-    }
-
-    .progress {
-      flex: 1;
-      height: 6px;
-      background: rgba(0,0,0,0.08);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .progress-bar {
-      height: 100%;
-      background: var(--accent);
-      width: 0%;
-      transition: width 0.4s ease;
-    }
-
-    h1 { font-size: 26px; font-weight: 600; margin-bottom: 8px; text-align: center; }
-
-    .step-title {
-      font-size: 22px;
-      font-weight: 600;
-      margin: 24px 0 20px;
-      text-align: center;
-    }
-
-    .card {
-      background: var(--card);
-      border-radius: 20px;
-      padding: 24px;
-      margin-bottom: 16px;
-      font-size: 20px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-      user-select: none;
-    }
-
-    .card:active {
-      transform: scale(0.98);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-    }
-
-    .color-dot {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    input, textarea {
-      width: 100%;
-      padding: 18px;
-      font-size: 18px;
-      border-radius: 16px;
-      border: 1px solid #ccc;
-      background: var(--card);
-      color: var(--text);
-      margin: 12px 0;
-    }
-
-    #status {
-      margin: 24px 0;
-      color: var(--hint);
-      font-size: 15px;
-      text-align: center;
-    }
-
-    #add-form { display: none; }
-
-    #orders-list { margin-top: 32px; display: none; }
-
-    #analytics-section { 
-      margin-top: 32px; 
-      display: none; 
-      padding: 20px; 
-      background: var(--card); 
-      border-radius: 20px; 
-    }
-
-    .analytics-item {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(0,0,0,0.1);
-    }
-
-    .analytics-item:last-child {
-      border-bottom: none;
-    }
-
-    .analytics-label {
-      font-size: 18px;
-      color: var(--text);
-    }
-
-    .analytics-value {
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--accent);
-    }
-
-    .analytics-total {
-      font-size: 24px;
-      font-weight: 700;
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 2px solid var(--accent);
-    }
-
-    .bottom-panel {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--bg);
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-      padding: 12px 16px;
-      display: flex;
-      gap: 8px;
-      z-index: 1000;
-    }
-
-    .bottom-btn {
-      flex: 1;
-      padding: 14px;
-      font-size: 16px;
-      font-weight: 600;
-      border-radius: 16px;
-      border: none;
-      cursor: pointer;
-      transition: background 0.2s;
-      background: var(--accent);
-      color: white;
-    }
-
-    .bottom-btn:hover { opacity: 0.9; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <button class="back-btn" onclick="goBack()" id="backBtn" style="visibility:hidden;">←</button>
-      <div class="progress">
-        <div class="progress-bar" id="progressBar"></div>
-      </div>
-    </header>
-
-    <h1>Мои заказы</h1>
-
-    <div id="add-form">
-      <div class="step-title" id="stepTitle"></div>
-      <div id="currentStep"></div>
-      <div id="status"></div>
-    </div>
-
-    <div id="orders-list"></div>
-
-    <div id="analytics-section">
-      <h2 style="text-align:center; margin-bottom:20px;">Аналитика заказов</h2>
-      <div id="analytics-content">
-        <div class="analytics-item">
-          <span class="analytics-label">Сумма в пути (оплаченные):</span>
-          <span class="analytics-value" id="in-transit-paid">0 ₽</span>
-        </div>
-        <div class="analytics-item">
-          <span class="analytics-label">Сумма в ПВЗ (оплаченные):</span>
-          <span class="analytics-value" id="in-pvz-paid">0 ₽</span>
-        </div>
-        <div class="analytics-item">
-          <span class="analytics-label">Сумма полученных:</span>
-          <span class="analytics-value" id="received-total">0 ₽</span>
-        </div>
-        <div class="analytics-item">
-          <span class="analytics-label">Сумма отправленных:</span>
-          <span class="analytics-value" id="sent-total">0 ₽</span>
-        </div>
-        <div class="analytics-item">
-          <span class="analytics-label">Сумма на складе маркета:</span>
-          <span class="analytics-value" id="market-warehouse-total">0 ₽</span>
-        </div>
-        <div class="analytics-item analytics-total">
-          <span class="analytics-label">Общая сумма:</span>
-          <span class="analytics-value" id="total-amount">0 ₽</span>
-        </div>
-        <div style="margin-top: 20px; color: var(--hint); font-size: 14px; text-align: center;">
-          * Учитываются только соответствующие статусы
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="bottom-panel">
-    <button class="bottom-btn" onclick="startAddOrder()">Новый заказ</button>
-    <button class="bottom-btn" onclick="toggleOrders()">Список</button>
-    <button class="bottom-btn" onclick="toggleAnalytics()">Аналитика</button>
-  </div>
-
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
-
-    function applyTheme() {
-      document.body.style.background = tg.backgroundColor;
-      document.body.style.color = tg.textColor;
-      document.querySelector('.bottom-panel').style.background = tg.backgroundColor;
-    }
-    applyTheme();
-    tg.onEvent('themeChanged', applyTheme);
-
-    let orderData = {};
-    let currentStep = 0;
-    let quantity = 1;
-
-    const steps = [
-      {
-        title: 'Магазин',
-        render: () => {
-          const shops = [
-            { name: 'Wildberries', color: 'var(--wb-color)' },
-            { name: 'Ozon', color: 'var(--ozon-color)' },
-            { name: 'Avito', color: 'var(--avito-color)' },
-            { name: 'Яндекс Маркет', color: 'var(--ym-color)' },
-            { name: 'Aliexpress', color: 'var(--aliexpress-color)' },
-            { name: 'Другое', color: '#888888' }
-          ];
-          return shops.map(s => `
-            <div class="card" onclick="selectValue('shop', '${s.name}')">
-              <div class="color-dot" style="background:${s.color}"></div>
-              ${s.name}
-            </div>
-          `).join('');
-        }
-      },
-
-      {
-        title: 'Номер заказа',
-        render: () => {
-          if (orderData.shop === 'Wildberries') {
-            orderData.orderNumber = '';
-            setTimeout(nextStep, 100); // автоматический пропуск
-            return '<p style="color:#888; text-align:center; padding:20px;">Для Wildberries не нужен</p>';
-          }
-          return `
-            <input type="text" id="orderNum" placeholder="Номер заказа" value="${orderData.orderNumber || ''}" autofocus>
-            <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
-          `;
-        },
-        save: () => {
-          if (orderData.shop !== 'Wildberries') {
-            orderData.orderNumber = document.getElementById('orderNum')?.value.trim() || '';
-          }
-        }
-      },
-
-      {
-        title: 'Аккаунт',
-        render: () => {
-          const accs = ['Артем','Лиза','Роберт','Максим','Мама','Миша','Кунак','Другое'];
-          let html = accs.map(a => `
-            <div class="card" onclick="selectValue('account', '${a}')">${a}</div>
-          `).join('');
-          if (orderData.account === 'Другое') {
-            html += `
-              <input type="text" id="accOther" placeholder="Введите аккаунт" value="${orderData.accountOther || ''}" autofocus>
-              <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
-            `;
-          }
-          return html;
-        },
-        save: () => {
-          if (orderData.account === 'Другое') {
-            orderData.account = document.getElementById('accOther')?.value.trim() || 'Другое';
-          }
-        }
-      },
-
-      {
-        title: 'Дата заказа',
-        render: () => {
-          const today = new Date().toISOString().split('T')[0];
-          const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-          return `
-            <div class="card" onclick="selectValue('date', '${today}')">Сегодня</div>
-            <div class="card" onclick="selectValue('date', '${yesterday}')">Вчера</div>
-            <div class="card" onclick="selectValue('date', 'other')">Другое</div>
-          `;
-        }
-      },
-
-      {
-        title: 'Позиция (товар)',
-        render: () => `
-          <input type="text" id="position" placeholder="Название товара" value="${orderData.position || ''}" autofocus>
-          <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
-        `,
-        save: () => orderData.position = document.getElementById('position')?.value.trim() || ''
-      },
-
-      {
-        title: 'Адрес ПВЗ',
-        render: () => {
-          let addrs = [];
-          if (orderData.shop === 'Wildberries') {
-            addrs = [
-              '1 Грайвороновский проезд 3',
-              'Проспект Буденного 51к1',
-              'Красноказарменная 15к1',
-              'Профсоюзная 96',
-              'Люблинская 51',
-              'Севастопольский проспект 7/6к1',
-              'Другое'
-            ];
-          } else if (orderData.shop === 'Ozon') {
-            addrs = ['Пролетарский 2А', 'Другое'];
-          } else {
-            addrs = ['Другое'];
-          }
-
-          let html = '';
-          addrs.forEach(a => {
-            html += `<div class="card" onclick="selectValue('pvz', '${a}')">${a}</div>`;
-          });
-          if (orderData.pvz === 'Другое') {
-            html += `
-              <input type="text" id="pvzOther" placeholder="Введите адрес" value="${orderData.pvzOther || ''}" autofocus>
-              <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
-            `;
-          }
-          return html;
-        },
-        save: () => {
-          if (orderData.pvz === 'Другое') {
-            orderData.pvz = document.getElementById('pvzOther')?.value.trim() || 'Другое';
-          }
-        }
-      },
-
-      {
-        title: 'Оплата',
-        render: () => {
-          const opts = ['Оплачен', 'При получении'];
-          return opts.map(o => `
-            <div class="card" onclick="selectValue('payment', '${o}')">${o}</div>
-          `).join('');
-        }
-      },
-
-      {
-        title: 'Цена за 1 шт (₽)',
-        render: () => `
-          <input type="number" id="price" min="1" step="0.01" placeholder="Цена" value="${orderData.price || ''}" autofocus>
-          <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
-        `,
-        save: () => orderData.price = parseFloat(document.getElementById('price')?.value) || 0
-      },
-
-      {
-        title: 'Количество штук',
-        render: () => `
-          <input type="number" id="quantity" min="1" placeholder="Количество" value="${quantity}" autofocus>
-          <div class="card" onclick="nextStep()" style="justify-content:center; margin-top:16px; font-weight:600;">Продолжить</div>
-        `,
-        save: () => quantity = parseInt(document.getElementById('quantity')?.value || 1)
-      },
-
-      {
-        title: 'Подтвердить',
-        render: () => `
-          <div style="padding:20px; background:var(--card); border-radius:16px; margin-bottom:24px;">
-            <p><b>Магазин:</b> ${orderData.shop}</p>
-            <p><b>Аккаунт:</b> ${orderData.account}</p>
-            <p><b>Дата:</b> ${orderData.date}</p>
-            <p><b>Товар:</b> ${orderData.position}</p>
-            <p><b>ПВЗ:</b> ${orderData.pvz}</p>
-            <p><b>Оплата:</b> ${orderData.payment}</p>
-            <p><b>Цена за шт:</b> ${orderData.price} ₽</p>
-            <p><b>Количество:</b> ${quantity} шт</p>
-            <p><b>Сумма за строку:</b> ${(orderData.price || 0).toFixed(2)} ₽</p>
-          </div>
-          <div class="card" onclick="addOrderToSheets()" style="justify-content:center; font-weight:600; font-size:20px;">
-            Добавить в таблицу
-          </div>
-        `
+      
+      // 2. ПВЗ (только если оплачен)
+      if (status.includes('пвз') && payment.includes('оплачен')) {
+        inPvzPaid += sum;
+        totalAmount += sum;
       }
-    ];
-
-    function startAddOrder() {
-      orderData = {};
-      currentStep = 0;
-      quantity = 1;
-      document.getElementById('add-form').style.display = 'block';
-      document.getElementById('orders-list').style.display = 'none';
-      document.getElementById('analytics-section').style.display = 'none';
-      document.getElementById('status').textContent = '';
-      renderStep();
-      updateProgress();
-      document.getElementById('backBtn').style.visibility = 'hidden';
-    }
-
-    function renderStep() {
-      const step = steps[currentStep];
-      document.getElementById('stepTitle').textContent = step.title;
-      document.getElementById('currentStep').innerHTML = step.render ? step.render() : '';
-      document.getElementById('backBtn').style.visibility = currentStep > 0 ? 'visible' : 'hidden';
-
-      // Автофокус с задержкой
-      const input = document.querySelector('input[autofocus]');
-      if (input) {
-        setTimeout(() => input.focus(), 300);
+      
+      // 3. Получен (любая оплата)
+      if (status.includes('получен')) {
+        receivedTotal += sum;
+        totalAmount += sum;
       }
-    }
-
-    function updateProgress() {
-      const percent = ((currentStep + 1) / steps.length) * 100;
-      document.getElementById('progressBar').style.width = percent + '%';
-    }
-
-    function goBack() {
-      if (currentStep > 0) {
-        currentStep--;
-        renderStep();
-        updateProgress();
+      
+      // 4. Отправлен (любая оплата)
+      if (status.includes('отправлен')) {
+        sentTotal += sum;
+        totalAmount += sum;
       }
-    }
+      
+      // 5. На складе Маркета (любая оплата)
+      if (status.includes('на складе маркета')) {
+        marketWarehouseTotal += sum;
+        totalAmount += sum;
+      }
+    });
 
-    window.selectValue = function(field, value) {
-      orderData[field] = value;
-      currentStep++;
-      renderStep();
-      updateProgress();
+    // Форматируем суммы для отображения (с пробелами для читаемости)
+    const formatSum = (sum) => {
+      return sum.toLocaleString('ru-RU', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
     };
 
-    function nextStep() {
-      const step = steps[currentStep];
-      if (step.save) step.save();
+    console.log('Аналитика рассчитана:', {
+      inTransitPaid: formatSum(inTransitPaid),
+      inPvzPaid: formatSum(inPvzPaid),
+      receivedTotal: formatSum(receivedTotal),
+      sentTotal: formatSum(sentTotal),
+      marketWarehouseTotal: formatSum(marketWarehouseTotal),
+      totalAmount: formatSum(totalAmount)
+    });
 
-      currentStep++;
-      renderStep();
-      updateProgress();
-    }
-
-    async function addOrderToSheets() {
-      const status = document.getElementById('status');
-      status.textContent = `Добавление ${quantity} строк...`;
-      const confirmCard = document.querySelector('.card[onclick="addOrderToSheets()"]');
-      if (confirmCard) confirmCard.style.pointerEvents = 'none';
-
-      try {
-        const price = parseFloat(orderData.price) || 0;
-        const singleSum = price.toFixed(2);
-
-        const rows = [];
-        for (let i = 0; i < quantity; i++) {
-          rows.push({
-            Магазин: orderData.shop,
-            'Номер заказа': orderData.orderNumber || '',
-            Аккаунт: orderData.account,
-            'Дата заказа': orderData.date,
-            Позиция: orderData.position,
-            'Адрес ПВЗ': orderData.pvz,
-            Статус: 'В пути',
-            Оплата: orderData.payment,
-            'Цена товара': price,
-            Количество: 1,
-            Сумма: singleSum,
-          });
-        }
-
-        const res = await fetch('/api/add-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            initData: tg.initData,
-            rows
-          })
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`Сервер: ${res.status} — ${errText}`);
-        }
-
-        status.textContent = `Успешно добавлено ${quantity} строк!`;
-        document.getElementById('add-form').style.display = 'none';
-        setTimeout(() => { status.textContent = ''; }, 5000); // очищаем статус через 5 сек
-        getOrders();
-      } catch (err) {
-        console.error(err);
-        status.textContent = 'Ошибка: ' + err.message;
-      } finally {
-        if (confirmCard) confirmCard.style.pointerEvents = 'auto';
-      }
-    }
-
-    function toggleOrders() {
-      const list = document.getElementById('orders-list');
-      const analytics = document.getElementById('analytics-section');
-      analytics.style.display = 'none';
-      list.style.display = list.style.display === 'block' ? 'none' : 'block';
-      document.getElementById('add-form').style.display = 'none';
-      
-      if (list.style.display === 'block') {
-        getOrders();
-      }
-    }
-
-    function toggleAnalytics() {
-      const analytics = document.getElementById('analytics-section');
-      const list = document.getElementById('orders-list');
-      list.style.display = 'none';
-      document.getElementById('add-form').style.display = 'none';
-      analytics.style.display = analytics.style.display === 'block' ? 'none' : 'block';
-      
-      if (analytics.style.display === 'block') {
-        getAnalytics();
-      }
-    }
-
-    async function getOrders() {
-      const list = document.getElementById('orders-list');
-      list.innerHTML = '<p style="text-align:center; color:var(--hint);">Загрузка...</p>';
-
-      try {
-        const res = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ initData: tg.initData })
-        });
-
-        if (!res.ok) throw new Error('Ошибка загрузки');
-
-        const data = await res.json();
-
-        if (!data.orders || data.orders.length === 0) {
-          list.innerHTML = '<p style="text-align:center; color:var(--hint);">Заказов пока нет</p>';
-          return;
-        }
-
-        let html = '';
-        data.orders.forEach(order => {
-          html += `
-            <div class="card">
-              <div>
-                <strong>${order['Дата заказа'] || '—'}</strong><br>
-                ${order.Позиция || '—'}<br>
-                Сумма: ${order.Сумма || '—'} ₽
-              </div>
-            </div>
-          `;
-        });
-        list.innerHTML = html;
-      } catch (err) {
-        list.innerHTML = '<p style="color:red; text-align:center;">Ошибка загрузки</p>';
-      }
-    }
-
-    async function getAnalytics() {
-      const analyticsContent = document.getElementById('analytics-content');
-      analyticsContent.innerHTML = '<p style="text-align:center; color:var(--hint);">Загрузка аналитики...</p>';
-
-      try {
-        const res = await fetch('/api/analytics', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ initData: tg.initData })
-        });
-
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error('Ошибка сервера:', res.status, errorText);
-          throw new Error(`Ошибка ${res.status}: ${errorText}`);
-        }
-
-        const data = await res.json();
-        console.log('Данные аналитики:', data);
-
-        // Проверяем, что все нужные поля присутствуют
-        if (data.inTransitPaid === undefined || data.inPvzPaid === undefined || 
-            data.receivedTotal === undefined || data.sentTotal === undefined || 
-            data.marketWarehouseTotal === undefined || data.totalAmount === undefined) {
-          throw new Error('Неполные данные от сервера');
-        }
-
-        // Получаем элементы и проверяем их существование
-        const elements = {
-          'in-transit-paid': document.getElementById('in-transit-paid'),
-          'in-pvz-paid': document.getElementById('in-pvz-paid'),
-          'received-total': document.getElementById('received-total'),
-          'sent-total': document.getElementById('sent-total'),
-          'market-warehouse-total': document.getElementById('market-warehouse-total'),
-          'total-amount': document.getElementById('total-amount')
-        };
-
-        // Проверяем, что все элементы найдены
-        for (const [id, element] of Object.entries(elements)) {
-          if (!element) {
-            console.error(`Элемент с id="${id}" не найден на странице`);
-            throw new Error(`Ошибка отображения: элемент ${id} не найден`);
-          }
-        }
-
-        // Устанавливаем значения
-        elements['in-transit-paid'].textContent = data.inTransitPaid + ' ₽';
-        elements['in-pvz-paid'].textContent = data.inPvzPaid + ' ₽';
-        elements['received-total'].textContent = data.receivedTotal + ' ₽';
-        elements['sent-total'].textContent = data.sentTotal + ' ₽';
-        elements['market-warehouse-total'].textContent = data.marketWarehouseTotal + ' ₽';
-        elements['total-amount'].textContent = data.totalAmount + ' ₽';
-
-      } catch (err) {
-        console.error('Ошибка загрузки аналитики:', err);
-        analyticsContent.innerHTML = `
-          <p style="color:red; text-align:center; padding:20px;">
-            Ошибка загрузки аналитики<br>
-            <small>${err.message}</small>
-          </p>
-        `;
-      }
-    }
-  </script>
-</body>
-</html>
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        inTransitPaid: formatSum(inTransitPaid),
+        inPvzPaid: formatSum(inPvzPaid),
+        receivedTotal: formatSum(receivedTotal),
+        sentTotal: formatSum(sentTotal),
+        marketWarehouseTotal: formatSum(marketWarehouseTotal),
+        totalAmount: formatSum(totalAmount)
+      })
+    };
+  } catch (err) {
+    console.error('Ошибка в analytics:', err.message, err.stack);
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+  }
+};
