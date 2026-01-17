@@ -69,30 +69,31 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: 'Invalid initData signature' };
     }
 
-    const currentRowCount = sheet.rowCount; // всего строк (включая заголовок)
+    const currentRowCount = sheet.rowCount; // общее количество строк (включая заголовок)
 
-    if (currentRowCount <= 1) {
-      // Только заголовок или пусто — просто добавляем
+    // Всегда добавляем строки в конец таблицы
+    const insertStart = currentRowCount; // startIndex = текущая последняя строка (0-based, после неё)
+
+    // Если таблица имеет только заголовок (rowCount = 1), вставляем с startIndex = 1
+    if (currentRowCount === 1) {
+      // Просто добавляем строки без insertDimension (чтобы избежать ошибки startIndex)
       await sheet.addRows(rows);
-      console.log(`Добавлено ${rows.length} строк в пустую таблицу`);
+      console.log(`Добавлено ${rows.length} строк в таблицу с заголовком`);
     } else {
-      // Есть данные — вставляем новые строки после последней
-      const insertStart = currentRowCount; // после последней строки (0-based индекс)
-
-      // Вставляем строки с наследованием форматирования от предыдущей строки
+      // Есть хотя бы одна строка данных — вставляем с наследованием форматирования
       await sheet.insertDimension('ROWS', {
         sheetId: sheet.sheetId,
         dimension: {
-          startIndex: insertStart,
+          startIndex: insertStart,  // после последней строки
           endIndex: insertStart + rows.length
         },
-        inheritFromBefore: true // копирует форматирование, validation, цвета и т.д.
+        inheritFromBefore: true // копирует форматирование, validation, цвета
       });
 
       // Заполняем значения в новых строках
       await sheet.addRows(rows);
 
-      console.log(`Добавлено ${rows.length} строк с наследованием форматирования`);
+      console.log(`Добавлено ${rows.length} строк с копированием форматирования`);
     }
 
     return {
