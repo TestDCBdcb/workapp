@@ -69,10 +69,27 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: 'Invalid initData signature' };
     }
 
-    // Просто добавляем строки пачкой — без insertDimension
-    await sheet.addRows(rows);
+    const currentRowCount = sheet.rowCount; // всего строк (включая заголовок)
 
-    console.log(`Успешно добавлено ${rows.length} строк (простой метод)`);
+    // Всегда вставляем в конец таблицы
+    const insertStart = currentRowCount; // индекс после последней строки
+
+    if (rows.length > 0) {
+      // Вставляем новые строки (с inheritFromBefore для копирования форматирования)
+      await sheet.insertDimension('ROWS', {
+        sheetId: sheet.sheetId,
+        dimension: {
+          startIndex: insertStart,
+          endIndex: insertStart + rows.length
+        },
+        inheritFromBefore: true // копирует форматирование из предыдущей строки
+      });
+
+      // Заполняем значения в новых строках
+      await sheet.addRows(rows);
+    }
+
+    console.log(`Успешно добавлено ${rows.length} строк в конец таблицы (rowCount был ${currentRowCount})`);
 
     return {
       statusCode: 200,
