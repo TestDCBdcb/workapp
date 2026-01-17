@@ -67,6 +67,7 @@
       background: rgba(0,0,0,0.08);
       border-radius: 3px;
       overflow: hidden;
+      display: none; /* Скрываем на всех страницах кроме формы добавления */
     }
 
     .progress-bar {
@@ -76,12 +77,10 @@
       transition: width 0.4s ease;
     }
 
-    h1 { font-size: 26px; font-weight: 600; margin-bottom: 8px; text-align: center; }
-
     .step-title {
       font-size: 22px;
       font-weight: 600;
-      margin: 24px 0 20px;
+      margin: 0 0 20px;
       text-align: center;
     }
 
@@ -148,10 +147,10 @@
 
     #add-form { display: none; }
 
-    #orders-list { margin-top: 32px; display: none; }
+    #orders-list { margin-top: 0; display: none; }
 
     #analytics-section { 
-      margin-top: 32px; 
+      margin-top: 0; 
       display: none; 
     }
 
@@ -235,14 +234,6 @@
       color: var(--accent);
     }
 
-    .analytics-total {
-      font-size: 24px;
-      font-weight: 700;
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 2px solid var(--accent);
-    }
-
     .arrow-icon {
       font-size: 24px;
       color: var(--accent);
@@ -253,85 +244,119 @@
       transform: rotate(180deg);
     }
 
-    .pvz-group {
-      margin-bottom: 24px;
+    /* Стили для табличной структуры в списках */
+    .table-container {
       background: var(--card);
-      border-radius: 16px;
-      padding: 16px;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
     }
 
-    .pvz-title {
+    .table-header {
       font-size: 20px;
       font-weight: 600;
-      margin-bottom: 16px;
       color: var(--accent);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .pvz-empty {
-      color: var(--hint);
-      font-style: italic;
-      padding: 12px;
+      margin-bottom: 20px;
       text-align: center;
     }
 
-    .payment-group {
-      margin-bottom: 16px;
-      padding: 12px;
-      background: rgba(0,0,0,0.03);
-      border-radius: 12px;
-    }
-
-    .payment-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .payment-paid {
-      color: var(--paid);
-    }
-
-    .payment-unpaid {
-      color: var(--unpaid);
-    }
-
-    .position-item {
-      background: var(--bg);
-      border-radius: 12px;
-      padding: 14px;
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .position-name {
-      font-size: 18px;
-      font-weight: 500;
-      flex: 1;
-    }
-
-    .position-count {
-      background: var(--accent);
-      color: white;
-      border-radius: 8px;
-      padding: 4px 10px;
-      font-size: 16px;
-      font-weight: 600;
-      margin-left: 12px;
-    }
-
-    .position-amount {
+    .table-total {
       font-size: 18px;
       font-weight: 600;
       color: var(--accent);
-      margin-left: 12px;
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 12px;
+      background: rgba(0,136,204,0.1);
+      border-radius: 12px;
+    }
+
+    .table-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+      align-items: center;
+    }
+
+    .table-row:last-child {
+      border-bottom: none;
+    }
+
+    .table-cell {
+      font-size: 18px;
+    }
+
+    .table-cell-name {
+      font-weight: 500;
+    }
+
+    .table-cell-count {
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .table-cell-amount {
+      text-align: right;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* Стили для ПВЗ с подразделами оплаты */
+    .pvz-table-container {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    .pvz-header {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pvz-total {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--accent);
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 12px;
+      background: rgba(0,136,204,0.1);
+      border-radius: 12px;
+    }
+
+    .payment-section {
+      margin-bottom: 20px;
+    }
+
+    .payment-header {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .payment-paid .payment-header {
+      background: rgba(0,204,102,0.1);
+      color: var(--paid);
+    }
+
+    .payment-unpaid .payment-header {
+      background: rgba(255,102,0,0.1);
+      color: var(--unpaid);
     }
 
     .empty-pvz-list {
@@ -413,8 +438,6 @@
       </div>
     </header>
 
-    <h1>Мои заказы</h1>
-
     <div id="add-form">
       <div class="step-title" id="stepTitle"></div>
       <div id="currentStep"></div>
@@ -458,18 +481,18 @@
     let analyticsExpanded = false;
     let allOrders = [];
     let currentStatusView = '';
-    let statusGroupsCache = {}; // Кэш для групп статусов
+    let statusGroupsCache = {};
 
     const steps = [
       {
         title: 'Магазин',
         render: () => {
           const shops = [
-            { name: 'Wildberries', color: 'var(--wb-color)' },
-            { name: 'Ozon', color: 'var(--ozon-color)' },
-            { name: 'Avito', color: 'var(--avito-color)' },
-            { name: 'Яндекс Маркет', color: 'var(--ym-color)' },
-            { name: 'Aliexpress', color: 'var(--aliexpress-color)' },
+            { name: 'Wildberries', color: 'var(--wb)' },
+            { name: 'Ozon', color: 'var(--ozon)' },
+            { name: 'Avito', color: 'var(--avito)' },
+            { name: 'Яндекс Маркет', color: 'var(--ym)' },
+            { name: 'Aliexpress', color: 'var(--aliexpress)' },
             { name: 'Другое', color: '#888888' }
           ];
           return shops.map(s => `
@@ -486,7 +509,7 @@
         render: () => {
           if (orderData.shop === 'Wildberries') {
             orderData.orderNumber = '';
-            setTimeout(nextStep, 100); // автоматический пропуск
+            setTimeout(nextStep, 100);
             return '<p style="color:#888; text-align:center; padding:20px;">Для Wildberries не нужен</p>';
           }
           return `
@@ -641,6 +664,7 @@
       document.getElementById('orders-list').style.display = 'none';
       document.getElementById('analytics-section').style.display = 'none';
       document.getElementById('status').textContent = '';
+      document.querySelector('.progress').style.display = 'flex'; // Показываем прогресс бар
       renderStep();
       updateProgress();
       document.getElementById('backBtn').style.visibility = 'hidden';
@@ -733,7 +757,7 @@
 
         status.textContent = `Успешно добавлено ${quantity} строк!`;
         document.getElementById('add-form').style.display = 'none';
-        setTimeout(() => { status.textContent = ''; }, 5000); // очищаем статус через 5 сек
+        setTimeout(() => { status.textContent = ''; }, 5000);
         showStatusSelection();
       } catch (err) {
         console.error(err);
@@ -749,6 +773,7 @@
       analytics.style.display = 'none';
       list.style.display = list.style.display === 'block' ? 'none' : 'block';
       document.getElementById('add-form').style.display = 'none';
+      document.querySelector('.progress').style.display = 'none'; // Скрываем прогресс бар
       
       if (list.style.display === 'block') {
         showStatusSelection();
@@ -760,6 +785,7 @@
       const list = document.getElementById('orders-list');
       list.style.display = 'none';
       document.getElementById('add-form').style.display = 'none';
+      document.querySelector('.progress').style.display = 'none'; // Скрываем прогресс бар
       analytics.style.display = analytics.style.display === 'block' ? 'none' : 'block';
       
       if (analytics.style.display === 'block') {
@@ -853,7 +879,43 @@
           paymentGroup[position].totalSum += sum;
         });
 
-        // Создаем группы для каждого ПВЗ
+        // Общие суммы для всего статуса
+        let totalItemsAll = 0;
+        let totalAmountAll = 0;
+        let totalPaidItemsAll = 0;
+        let totalPaidAmountAll = 0;
+        let totalUnpaidItemsAll = 0;
+        let totalUnpaidAmountAll = 0;
+
+        Object.values(pvzGroups).forEach(groups => {
+          const paidItems = Object.entries(groups.paid);
+          const unpaidItems = Object.entries(groups.unpaid);
+          
+          paidItems.forEach(([_, data]) => {
+            totalItemsAll += data.count;
+            totalAmountAll += data.totalSum;
+            totalPaidItemsAll += data.count;
+            totalPaidAmountAll += data.totalSum;
+          });
+          
+          unpaidItems.forEach(([_, data]) => {
+            totalItemsAll += data.count;
+            totalAmountAll += data.totalSum;
+            totalUnpaidItemsAll += data.count;
+            totalUnpaidAmountAll += data.totalSum;
+          });
+        });
+
+        // Общая статистика по статусу
+        html += `
+          <div class="table-total">
+            Всего: ${totalItemsAll} шт. на сумму ${totalAmountAll.toLocaleString('ru-RU')} ₽<br>
+            Оплачено: ${totalPaidItemsAll} шт. на сумму ${totalPaidAmountAll.toLocaleString('ru-RU')} ₽<br>
+            Не оплачено: ${totalUnpaidItemsAll} шт. на сумму ${totalUnpaidAmountAll.toLocaleString('ru-RU')} ₽
+          </div>
+        `;
+
+        // Создаем таблицы для каждого ПВЗ
         let hasItems = false;
         Object.entries(pvzGroups).forEach(([pvz, groups]) => {
           const paidItems = Object.entries(groups.paid);
@@ -867,18 +929,21 @@
           if (totalPaidItems > 0 || totalUnpaidItems > 0) {
             hasItems = true;
             html += `
-              <div class="pvz-group">
-                <div class="pvz-title">
+              <div class="pvz-table-container">
+                <div class="pvz-header">
                   <span>${pvz}</span>
                   <span>${totalPaidItems + totalUnpaidItems} шт.</span>
+                </div>
+                <div class="pvz-total">
+                  Всего: ${totalPaidItems + totalUnpaidItems} шт. на сумму ${(totalPaidSum + totalUnpaidSum).toLocaleString('ru-RU')} ₽
                 </div>
             `;
             
             // Оплаченные товары
             if (totalPaidItems > 0) {
               html += `
-                <div class="payment-group">
-                  <div class="payment-title payment-paid">
+                <div class="payment-section payment-paid">
+                  <div class="payment-header">
                     <span>Оплаченные</span>
                     <span>${totalPaidItems} шт. • ${totalPaidSum.toLocaleString('ru-RU')} ₽</span>
                   </div>
@@ -886,10 +951,10 @@
               
               paidItems.forEach(([position, data]) => {
                 html += `
-                  <div class="position-item">
-                    <div class="position-name">${position}</div>
-                    <div class="position-count">${data.count} шт.</div>
-                    <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
+                  <div class="table-row">
+                    <div class="table-cell table-cell-name">${position}</div>
+                    <div class="table-cell table-cell-count">${data.count} шт.</div>
+                    <div class="table-cell table-cell-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
                   </div>
                 `;
               });
@@ -900,8 +965,8 @@
             // Неоплаченные товары
             if (totalUnpaidItems > 0) {
               html += `
-                <div class="payment-group">
-                  <div class="payment-title payment-unpaid">
+                <div class="payment-section payment-unpaid">
+                  <div class="payment-header">
                     <span>Неоплаченные</span>
                     <span>${totalUnpaidItems} шт. • ${totalUnpaidSum.toLocaleString('ru-RU')} ₽</span>
                   </div>
@@ -909,10 +974,10 @@
               
               unpaidItems.forEach(([position, data]) => {
                 html += `
-                  <div class="position-item">
-                    <div class="position-name">${position}</div>
-                    <div class="position-count">${data.count} шт.</div>
-                    <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
+                  <div class="table-row">
+                    <div class="table-cell table-cell-name">${position}</div>
+                    <div class="table-cell table-cell-count">${data.count} шт.</div>
+                    <div class="table-cell table-cell-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
                   </div>
                 `;
               });
@@ -929,28 +994,8 @@
           html += `<p style="text-align:center; color:var(--hint); padding:20px;">Нет товаров в этом статусе</p>`;
         }
 
-        // Список пустых ПВЗ
-        const emptyPvz = Array.from(allPvzAddresses).filter(pvz => 
-          !pvzGroups[pvz] || 
-          (Object.keys(pvzGroups[pvz].paid).length === 0 && 
-           Object.keys(pvzGroups[pvz].unpaid).length === 0)
-        );
-
-        if (emptyPvz.length > 0) {
-          html += `
-            <div class="empty-pvz-list">
-              <div class="empty-pvz-title">Пустые ПВЗ в этом статусе:</div>
-          `;
-          
-          emptyPvz.forEach(pvz => {
-            html += `<div class="empty-pvz-item">${pvz}</div>`;
-          });
-          
-          html += `</div>`;
-        }
-
       } else {
-        // Для других статусов группируем просто по позициям (без разделения на оплаченные/неоплаченные)
+        // Для других статусов группируем просто по позициям
         const positionGroups = {};
         
         filteredOrders.forEach(order => {
@@ -974,21 +1019,25 @@
         const totalAmount = Object.values(positionGroups).reduce((sum, data) => sum + data.totalSum, 0);
         
         html += `
-          <div style="text-align:center; margin-bottom:20px; color:var(--hint);">
+          <div class="table-total">
             Всего: ${totalItems} шт. на сумму ${totalAmount.toLocaleString('ru-RU')} ₽
           </div>
         `;
 
-        // Создаем список позиций
+        // Создаем таблицу
+        html += `<div class="table-container">`;
+        
         Object.entries(positionGroups).forEach(([position, data]) => {
           html += `
-            <div class="position-item">
-              <div class="position-name">${position}</div>
-              <div class="position-count">${data.count} шт.</div>
-              <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
+            <div class="table-row">
+              <div class="table-cell table-cell-name">${position}</div>
+              <div class="table-cell table-cell-count">${data.count} шт.</div>
+              <div class="table-cell table-cell-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
             </div>
           `;
         });
+        
+        html += `</div>`;
       }
 
       statusDetails.innerHTML = html;
@@ -1161,7 +1210,7 @@
         `;
 
         analyticsContent.innerHTML = analyticsHTML;
-        analyticsExpanded = false; // Сбрасываем состояние при загрузке
+        analyticsExpanded = false;
 
       } catch (err) {
         console.error('Ошибка загрузки аналитики:', err);
