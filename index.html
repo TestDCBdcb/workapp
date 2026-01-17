@@ -354,6 +354,27 @@
       font-style: italic;
     }
 
+    .loading-spinner {
+      text-align: center;
+      padding: 20px;
+      color: var(--hint);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--hint);
+      border-radius: 50%;
+      border-top-color: var(--accent);
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     .bottom-panel {
       position: fixed;
       bottom: 0;
@@ -437,6 +458,7 @@
     let analyticsExpanded = false;
     let allOrders = [];
     let currentStatusView = '';
+    let statusGroupsCache = {}; // Кэш для групп статусов
 
     const steps = [
       {
@@ -753,6 +775,23 @@
       statusDetails.style.display = 'block';
       document.getElementById('backBtn').style.visibility = 'visible';
 
+      // Показываем спиннер загрузки
+      statusDetails.innerHTML = `
+        <div class="step-title">${status}</div>
+        <div class="loading-spinner">
+          <div class="spinner"></div>Загрузка...
+        </div>
+      `;
+
+      // Используем setTimeout для асинхронной отрисовки без блокировки UI
+      setTimeout(() => {
+        renderStatusDetails(status);
+      }, 10);
+    };
+
+    function renderStatusDetails(status) {
+      const statusDetails = document.getElementById('status-details');
+      
       // Фильтруем заказы по выбранному статусу
       const filteredOrders = allOrders.filter(order => 
         (order['Статус'] || 'Без статуса') === status
@@ -911,93 +950,49 @@
         }
 
       } else {
-        // Для других статусов группируем просто по позициям и оплате
-        const positionGroups = {
-          paid: {},
-          unpaid: {}
-        };
+        // Для других статусов группируем просто по позициям (без разделения на оплаченные/неоплаченные)
+        const positionGroups = {};
         
         filteredOrders.forEach(order => {
           const position = order['Позиция'] || 'Не указано';
           const quantity = parseInt(order['Количество']) || 1;
           const sum = parseFloat(order['Сумма']) || 0;
-          const payment = order['Оплата'] || 'Не указано';
-          const isPaid = payment.toLowerCase().includes('оплачен');
           
-          const paymentGroup = isPaid ? positionGroups.paid : positionGroups.unpaid;
-          
-          if (!paymentGroup[position]) {
-            paymentGroup[position] = {
+          if (!positionGroups[position]) {
+            positionGroups[position] = {
               count: 0,
               totalSum: 0
             };
           }
           
-          paymentGroup[position].count += quantity;
-          paymentGroup[position].totalSum += sum;
+          positionGroups[position].count += quantity;
+          positionGroups[position].totalSum += sum;
         });
 
         // Показываем общую статистику
-        const totalPaidItems = Object.values(positionGroups.paid).reduce((sum, data) => sum + data.count, 0);
-        const totalUnpaidItems = Object.values(positionGroups.unpaid).reduce((sum, data) => sum + data.count, 0);
-        const totalPaidSum = Object.values(positionGroups.paid).reduce((sum, data) => sum + data.totalSum, 0);
-        const totalUnpaidSum = Object.values(positionGroups.unpaid).reduce((sum, data) => sum + data.totalSum, 0);
+        const totalItems = Object.values(positionGroups).reduce((sum, data) => sum + data.count, 0);
+        const totalAmount = Object.values(positionGroups).reduce((sum, data) => sum + data.totalSum, 0);
         
         html += `
           <div style="text-align:center; margin-bottom:20px; color:var(--hint);">
-            Всего: ${totalPaidItems + totalUnpaidItems} шт. на сумму ${(totalPaidSum + totalUnpaidSum).toLocaleString('ru-RU')} ₽
+            Всего: ${totalItems} шт. на сумму ${totalAmount.toLocaleString('ru-RU')} ₽
           </div>
         `;
 
-        // Оплаченные товары
-        if (totalPaidItems > 0) {
+        // Создаем список позиций
+        Object.entries(positionGroups).forEach(([position, data]) => {
           html += `
-            <div class="payment-group">
-              <div class="payment-title payment-paid">
-                <span>Оплаченные</span>
-                <span>${totalPaidItems} шт. • ${totalPaidSum.toLocaleString('ru-RU')} ₽</span>
-              </div>
+            <div class="position-item">
+              <div class="position-name">${position}</div>
+              <div class="position-count">${data.count} шт.</div>
+              <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
+            </div>
           `;
-          
-          Object.entries(positionGroups.paid).forEach(([position, data]) => {
-            html += `
-              <div class="position-item">
-                <div class="position-name">${position}</div>
-                <div class="position-count">${data.count} шт.</div>
-                <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
-              </div>
-            `;
-          });
-          
-          html += `</div>`;
-        }
-
-        // Неоплаченные товары
-        if (totalUnpaidItems > 0) {
-          html += `
-            <div class="payment-group">
-              <div class="payment-title payment-unpaid">
-                <span>Неоплаченные</span>
-                <span>${totalUnpaidItems} шт. • ${totalUnpaidSum.toLocaleString('ru-RU')} ₽</span>
-              </div>
-          `;
-          
-          Object.entries(positionGroups.unpaid).forEach(([position, data]) => {
-            html += `
-              <div class="position-item">
-                <div class="position-name">${position}</div>
-                <div class="position-count">${data.count} шт.</div>
-                <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
-              </div>
-            `;
-          });
-          
-          html += `</div>`;
-        }
+        });
       }
 
       statusDetails.innerHTML = html;
-    };
+    }
 
     window.toggleAnalyticsDetails = function() {
       analyticsExpanded = !analyticsExpanded;
@@ -1022,8 +1017,18 @@
       const statusDetails = document.getElementById('status-details');
       statusSelection.style.display = 'block';
       statusDetails.style.display = 'none';
-      statusSelection.innerHTML = '<p style="text-align:center; color:var(--hint);">Загрузка статусов...</p>';
+      statusSelection.innerHTML = `
+        <div class="loading-spinner">
+          <div class="spinner"></div>Загрузка...
+        </div>
+      `;
       document.getElementById('backBtn').style.visibility = 'hidden';
+
+      // Если данные уже загружены, используем кэш
+      if (Object.keys(statusGroupsCache).length > 0) {
+        renderStatusSelectionFromCache();
+        return;
+      }
 
       try {
         const res = await fetch('/api/orders', {
@@ -1042,7 +1047,7 @@
           return;
         }
 
-        // Группируем заказы по статусам
+        // Группируем заказы по статусам и кэшируем
         const statusGroups = {};
         allOrders.forEach(order => {
           const status = order['Статус'] || 'Без статуса';
@@ -1051,30 +1056,49 @@
           }
           statusGroups[status].push(order);
         });
-
-        let html = '<div class="step-title">Выберите статус</div>';
         
-        // Создаем карточки для каждого статуса
-        Object.entries(statusGroups).forEach(([status, orders]) => {
-          const count = orders.length;
-          html += `
-            <div class="card status-card" onclick="showStatusDetails('${status}')">
-              <div>${status}</div>
-              <div class="status-count">${count}</div>
-            </div>
-          `;
-        });
-
-        statusSelection.innerHTML = html;
+        // Сохраняем в кэш
+        statusGroupsCache = statusGroups;
+        
+        // Отображаем из кэша
+        renderStatusSelectionFromCache();
 
       } catch (err) {
         statusSelection.innerHTML = '<p style="color:red; text-align:center;">Ошибка загрузки</p>';
       }
     }
 
+    function renderStatusSelectionFromCache() {
+      const statusSelection = document.getElementById('status-selection');
+      
+      if (Object.keys(statusGroupsCache).length === 0) {
+        statusSelection.innerHTML = '<p style="text-align:center; color:var(--hint);">Заказов пока нет</p>';
+        return;
+      }
+
+      let html = '<div class="step-title">Выберите статус</div>';
+      
+      // Создаем карточки для каждого статуса из кэша
+      Object.entries(statusGroupsCache).forEach(([status, orders]) => {
+        const count = orders.length;
+        html += `
+          <div class="card status-card" onclick="showStatusDetails('${status}')">
+            <div>${status}</div>
+            <div class="status-count">${count}</div>
+          </div>
+        `;
+      });
+
+      statusSelection.innerHTML = html;
+    }
+
     async function getAnalytics() {
       const analyticsContent = document.getElementById('analytics-content');
-      analyticsContent.innerHTML = '<p style="text-align:center; color:var(--hint);">Загрузка аналитики...</p>';
+      analyticsContent.innerHTML = `
+        <div class="loading-spinner">
+          <div class="spinner"></div>Загрузка аналитики...
+        </div>
+      `;
 
       try {
         const res = await fetch('/api/analytics', {
