@@ -69,26 +69,38 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: 'Invalid initData signature' };
     }
 
-    // Получаем актуальное количество строк (включая заголовок)
     const currentRowCount = sheet.rowCount;
 
-    // Всегда добавляем в конец, начиная с индекса currentRowCount
-    const insertStart = currentRowCount; // после последней строки
-
-    // Вставляем новые строки (с inheritFromBefore для копирования форматирования, если возможно)
-    await sheet.insertDimension('ROWS', {
-      sheetId: sheet.sheetId,
-      dimension: {
-        startIndex: insertStart,
-        endIndex: insertStart + rows.length
-      },
-      inheritFromBefore: true // копирует форматирование из предыдущей строки (если есть)
-    });
-
-    // Заполняем значения в новых строках
+    // Добавляем строки в конец (самый простой и надёжный способ)
     await sheet.addRows(rows);
 
-    console.log(`Успешно добавлено ${rows.length} строк в конец таблицы (rowCount был ${currentRowCount})`);
+    // Копируем форматирование из последней существующей строки в новые (если есть)
+    if (currentRowCount > 1) {
+      const sourceRowIndex = currentRowCount - 1; // последняя строка перед добавлением
+
+      // Загружаем стили из последней строки
+      await sheet.loadCells(`A${sourceRowIndex}:AG${sourceRowIndex}`);
+
+      // Загружаем новые строки для копирования стилей
+      await sheet.loadCells(`A${currentRowCount + 1}:AG${currentRowCount + rows.length}`);
+
+      // Копируем стили
+      for (let i = 0; i < rows.length; i++) {
+        const targetRowIndex = currentRowCount + i;
+        for (let col = 0; col < sheet.columnCount; col++) {
+          const sourceCell = sheet.getCell(sourceRowIndex, col);
+          const targetCell = sheet.getCell(targetRowIndex, col);
+          targetCell.backgroundColor = sourceCell.backgroundColor;
+          targetCell.textFormat = sourceCell.textFormat;
+          targetCell.userEnteredFormat = sourceCell.userEnteredFormat;
+        }
+      }
+
+      // Сохраняем изменения стилей
+      await sheet.saveUpdatedCells();
+    }
+
+    console.log(`Успешно добавлено ${rows.length} строк в конец таблицы (с копированием стилей)`);
 
     return {
       statusCode: 200,
