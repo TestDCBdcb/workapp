@@ -2,32 +2,29 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const crypto = require('crypto');
 
-// Глобальные переменные для кэша авторизации
+// Кэш авторизации
 let doc = null;
-let isInitialized = false;
 
-async function initializeSheets() {
-  if (isInitialized) return;
+async function getDoc() {
+  if (doc) return doc;
 
   try {
-    console.log('Инициализация Google Sheets...');
-    const serviceAccountAuth = new JWT({
+    const auth = new JWT({
       email: process.env.CLIENT_EMAIL,
       key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n'),
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
-    doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID, serviceAccountAuth);
+    doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID, auth);
     await doc.loadInfo();
-    isInitialized = true;
-    console.log('Google Sheets успешно инициализирован');
+    console.log('Google Sheets инициализирован');
+    return doc;
   } catch (err) {
-    console.error('Ошибка инициализации Google Sheets:', err.message, err.stack);
-    throw err; // чтобы увидеть в логах
+    console.error('Ошибка инициализации doc:', err.message);
+    throw err;
   }
 }
 
-// Валидация Telegram initData (без изменений)
 function validateInitData(initData, botToken) {
   const dataCheckString = Object.keys(initData)
     .filter(key => key !== 'hash')
@@ -52,16 +49,16 @@ exports.handler = async (event) => {
   }
 
   try {
-    // Инициализация при первом вызове
-    await initializeSheets();
+    const sheet = (await getDoc()).sheetsByIndex[0];
 
     const body = JSON.parse(event.body || '{}');
-    const { initData } = body;
+    const { initData, rows } = body;
 
-    if (!initData) {
-      return { statusCode: 400, body: 'Missing initData' };
+    if (!initData || !rows || !Array.isArray(rows) || rows.length === 0) {
+      return { statusCode: 400, body: 'Missing initData or rows array' };
     }
 
+    // Валидация Telegram initData
     const initDataObj = {};
     initData.split('&').forEach(pair => {
       const [key, value] = pair.split('=');
@@ -72,26 +69,18 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: 'Invalid initData signature' };
     }
 
-    const sheet = doc.sheetsByIndex[0];
-    const rows = await sheet.getRows();
+    // Самый простой и надёжный способ — добавляем строки в конец таблицы
+    await sheet.addRows(rows);
 
-    const orders = rows.map(row => ({
-      Магазин: row.get('Магазин') || '',
-      'Номер заказа': row.get('Номер заказа') || '',
-      'Дата заказа': row.get('Дата заказа') || '',
-      Позиция: row.get('Позиция') || '',
-      Сумма: row.get('Сумма') || '',
-      Покупатель: row.get('Покупатель') || '',
-      Прибыль: row.get('Прибыль') || ''
-    }));
+    console.log(`Успешно добавлено ${rows.length} строк в конец таблицы`);
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orders })
+      body: JSON.stringify({ success: true, count: rows.length })
     };
   } catch (err) {
-    console.error('Ошибка в handler:', err.message, err.stack);
+    console.error('Ошибка add-order:', err.message, err.stack);
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };
