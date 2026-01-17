@@ -404,8 +404,14 @@
           });
 
           if (!res.ok) {
-            throw new Error(`Ошибка на строке ${i+1}: ${res.status}`);
+            const errText = await res.text();
+            throw new Error(`Ошибка на строке ${i+1}: ${res.status} — ${errText}`);
           }
+
+          // Задержка 400 мс между добавлениями — решает проблему "залипания" на одной строке
+          await new Promise(resolve => setTimeout(resolve, 400));
+
+          console.log(`Строка ${i+1}/${quantity} отправлена`);
         }
 
         status.textContent = `Успешно добавлено ${quantity} строк!`;
@@ -413,16 +419,51 @@
         getOrders(); // обновляем список
       } catch (err) {
         console.error(err);
-        status.textContent = 'Ошибка: ' + err.message;
+        status.textContent = 'Ошибка при добавлении: ' + err.message;
       } finally {
         document.getElementById('next-btn').disabled = false;
       }
     }
 
-    // Функция загрузки заказов (вставь сюда свой актуальный код getOrders из предыдущей версии)
+    // Функция загрузки заказов — вставьте сюда ваш актуальный код getOrders()
+    // Если нужно — вот пример базовой версии (замените на свою, если отличается):
     async function getOrders() {
-      // ... твой код getOrders ...
-      // если нужно — могу дать его заново
+      const status = document.getElementById('status');
+      const list = document.getElementById('orders-list');
+      status.textContent = 'Загрузка заказов...';
+      list.innerHTML = '';
+
+      try {
+        const response = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        if (!data.orders || data.orders.length === 0) {
+          status.textContent = 'Заказов пока нет';
+          return;
+        }
+
+        let html = '';
+        data.orders.forEach(order => {
+          html += `
+            <div style="background:#f8f9fa; padding:12px; border-radius:10px; margin-bottom:12px;">
+              <strong>${order['Дата заказа'] || '—'}</strong> — ${order.Позиция || '—'}<br>
+              Сумма: ${order.Сумма || '—'} ₽ | Покупатель: ${order.Покупатель || '—'}<br>
+              Магазин: ${order.Магазин || '—'}
+            </div>`;
+        });
+
+        list.innerHTML = html;
+        status.textContent = `Найдено: ${data.orders.length}`;
+      } catch (err) {
+        status.textContent = 'Ошибка загрузки: ' + err.message;
+      }
     }
   </script>
 </body>
