@@ -372,7 +372,7 @@
 
     async function addOrderToSheets() {
       const status = document.getElementById('status');
-      status.textContent = `Добавление ${quantity} строк...`;
+      status.textContent = `Добавление ${quantity} строк... (может занять 5–10 сек)`;
       document.getElementById('next-btn').disabled = true;
 
       try {
@@ -401,26 +401,28 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             initData: tg.initData,
-            rows: rows
+            rows
           })
         });
 
         if (!res.ok) {
-          throw new Error(`Ошибка: ${res.status}`);
+          const errText = await res.text();
+          throw new Error(`Ошибка сервера: ${res.status} — ${errText}`);
         }
 
-        status.textContent = `Успешно добавлено ${quantity} строк!`;
+        const result = await res.json();
+        status.textContent = `Успешно добавлено ${result.count} строк!`;
         document.getElementById('add-form').style.display = 'none';
         getOrders();
       } catch (err) {
         console.error(err);
-        status.textContent = 'Ошибка: ' + err.message;
+        status.textContent = 'Ошибка добавления: ' + err.message;
       } finally {
         document.getElementById('next-btn').disabled = false;
       }
     }
 
-    // Функция getOrders (замените на ваш актуальный код, если нужно)
+    // Функция загрузки заказов (оставьте вашу версию или используйте эту базовую)
     async function getOrders() {
       const status = document.getElementById('status');
       const list = document.getElementById('orders-list');
