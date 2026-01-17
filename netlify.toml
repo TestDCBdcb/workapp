@@ -1,0 +1,12 @@
+[build]
+  functions = "functions"
+  publish = "public"   # можно оставить, даже если папки public нет
+
+[functions]
+  directory = "functions"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
