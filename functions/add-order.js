@@ -2,7 +2,7 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const crypto = require('crypto');
 
-// Кэш авторизации (один раз на запуск функции)
+// Кэш авторизации
 let doc = null;
 
 async function getDoc() {
@@ -69,32 +69,10 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: 'Invalid initData signature' };
     }
 
-    const currentRowCount = sheet.rowCount; // общее количество строк (включая заголовок)
+    // Просто добавляем строки пачкой — без insertDimension
+    await sheet.addRows(rows);
 
-    // Всегда добавляем строки в конец таблицы
-    const insertStart = currentRowCount; // startIndex = текущая последняя строка (0-based, после неё)
-
-    // Если таблица имеет только заголовок (rowCount = 1), вставляем с startIndex = 1
-    if (currentRowCount === 1) {
-      // Просто добавляем строки без insertDimension (чтобы избежать ошибки startIndex)
-      await sheet.addRows(rows);
-      console.log(`Добавлено ${rows.length} строк в таблицу с заголовком`);
-    } else {
-      // Есть хотя бы одна строка данных — вставляем с наследованием форматирования
-      await sheet.insertDimension('ROWS', {
-        sheetId: sheet.sheetId,
-        dimension: {
-          startIndex: insertStart,  // после последней строки
-          endIndex: insertStart + rows.length
-        },
-        inheritFromBefore: true // копирует форматирование, validation, цвета
-      });
-
-      // Заполняем значения в новых строках
-      await sheet.addRows(rows);
-
-      console.log(`Добавлено ${rows.length} строк с копированием форматирования`);
-    }
+    console.log(`Успешно добавлено ${rows.length} строк (простой метод)`);
 
     return {
       statusCode: 200,
