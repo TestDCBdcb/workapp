@@ -2,31 +2,32 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const crypto = require('crypto');
 
-// Создаём JWT-клиент один раз (глобально)
-const serviceAccountAuth = new JWT({
-  email: process.env.CLIENT_EMAIL,
-  key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n'),
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
-
-// Создаём документ с авторизацией сразу
-const doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID, serviceAccountAuth);
-
-// Глобальная загрузка info (один раз при запуске функции)
+// Глобальные переменные для кэша авторизации
+let doc = null;
 let isInitialized = false;
 
-(async () => {
+async function initializeSheets() {
+  if (isInitialized) return;
+
   try {
-    console.log('Начинаю инициализацию Google Sheets...');
-    await doc.loadInfo(); // Это заменяет старый useServiceAccountAuth + loadInfo
+    console.log('Инициализация Google Sheets...');
+    const serviceAccountAuth = new JWT({
+      email: process.env.CLIENT_EMAIL,
+      key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n'),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+
+    doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID, serviceAccountAuth);
+    await doc.loadInfo();
     isInitialized = true;
     console.log('Google Sheets успешно инициализирован');
   } catch (err) {
-    console.error('Ошибка инициализации Google Sheets:', err.message);
+    console.error('Ошибка инициализации Google Sheets:', err.message, err.stack);
+    throw err; // чтобы увидеть в логах
   }
-})();
+}
 
-// Валидация Telegram initData
+// Валидация Telegram initData (без изменений)
 function validateInitData(initData, botToken) {
   const dataCheckString = Object.keys(initData)
     .filter(key => key !== 'hash')
@@ -51,6 +52,9 @@ exports.handler = async (event) => {
   }
 
   try {
+    // Инициализация при первом вызове
+    await initializeSheets();
+
     const body = JSON.parse(event.body || '{}');
     const { initData } = body;
 
@@ -58,7 +62,6 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: 'Missing initData' };
     }
 
-    // Парсинг initData
     const initDataObj = {};
     initData.split('&').forEach(pair => {
       const [key, value] = pair.split('=');
@@ -67,11 +70,6 @@ exports.handler = async (event) => {
 
     if (!validateInitData(initDataObj, process.env.BOT_TOKEN)) {
       return { statusCode: 403, body: 'Invalid initData signature' };
-    }
-
-    // Проверяем, что инициализация прошла
-    if (!isInitialized) {
-      return { statusCode: 503, body: 'Sheets not initialized yet - try again in a few seconds' };
     }
 
     const sheet = doc.sheetsByIndex[0];
@@ -93,7 +91,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ orders })
     };
   } catch (err) {
-    console.error('Ошибка в функции orders:', err.message, err.stack);
+    console.error('Ошибка в handler:', err.message, err.stack);
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };
