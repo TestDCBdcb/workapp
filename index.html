@@ -36,6 +36,7 @@
       font-family: system-ui, -apple-system, sans-serif;
       min-height: 100vh;
       padding: 16px;
+      padding-bottom: 100px;
     }
 
     .container { max-width: 600px; margin: 0 auto; }
@@ -128,7 +129,35 @@
 
     #add-form { display: none; }
 
-    #orders-list { margin-top: 32px; }
+    #orders-list { margin-top: 32px; display: none; }
+
+    .bottom-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg);
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      padding: 12px 16px;
+      display: flex;
+      gap: 12px;
+      z-index: 1000;
+    }
+
+    .bottom-btn {
+      flex: 1;
+      padding: 16px;
+      font-size: 18px;
+      font-weight: 600;
+      border-radius: 16px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+      background: var(--accent);
+      color: white;
+    }
+
+    .bottom-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -142,21 +171,18 @@
 
     <h1>Мои заказы</h1>
 
-    <div class="card" onclick="startAddOrder()" style="justify-content:center; font-size:22px; font-weight:600;">
-      ➕ Добавить заказ
-    </div>
-
     <div id="add-form">
       <div class="step-title" id="stepTitle"></div>
       <div id="currentStep"></div>
       <div id="status"></div>
     </div>
 
-    <div class="card" onclick="getOrders()" style="justify-content:center; font-weight:600; margin-top:32px;">
-      Обновить список
-    </div>
+    <div id="orders-list"></div>
+  </div>
 
-    <div id="orders-list" style="margin-top:32px;"></div>
+  <div class="bottom-panel">
+    <button class="bottom-btn" onclick="startAddOrder()">Новый заказ</button>
+    <button class="bottom-btn" onclick="toggleOrders()">Список</button>
   </div>
 
   <script>
@@ -167,6 +193,7 @@
     function applyTheme() {
       document.body.style.background = tg.backgroundColor;
       document.body.style.color = tg.textColor;
+      document.querySelector('.bottom-panel').style.background = tg.backgroundColor;
     }
     applyTheme();
     tg.onEvent('themeChanged', applyTheme);
@@ -201,8 +228,8 @@
         render: () => {
           if (orderData.shop === 'Wildberries') {
             orderData.orderNumber = '';
-            nextStep();
-            return '';
+            setTimeout(nextStep, 100); // автоматический пропуск
+            return '<p style="color:#888; text-align:center; padding:20px;">Для Wildberries не нужен</p>';
           }
           return `
             <input type="text" id="orderNum" placeholder="Номер заказа" value="${orderData.orderNumber || ''}" autofocus>
@@ -246,7 +273,7 @@
           return `
             <div class="card" onclick="selectValue('date', '${today}')">Сегодня</div>
             <div class="card" onclick="selectValue('date', '${yesterday}')">Вчера</div>
-            <div class="card" onclick="selectValue('date', 'other')">Другое (выбрать дату)</div>
+            <div class="card" onclick="selectValue('date', 'other')">Другое</div>
           `;
         }
       },
@@ -353,6 +380,8 @@
       currentStep = 0;
       quantity = 1;
       document.getElementById('add-form').style.display = 'block';
+      document.getElementById('orders-list').style.display = 'none';
+      document.getElementById('status').textContent = '';
       renderStep();
       updateProgress();
       document.getElementById('backBtn').style.visibility = 'hidden';
@@ -364,10 +393,10 @@
       document.getElementById('currentStep').innerHTML = step.render ? step.render() : '';
       document.getElementById('backBtn').style.visibility = currentStep > 0 ? 'visible' : 'hidden';
 
-      // Автофокус на input, если есть
+      // Автофокус с задержкой
       const input = document.querySelector('input[autofocus]');
       if (input) {
-        setTimeout(() => input.focus(), 100);
+        setTimeout(() => input.focus(), 300);
       }
     }
 
@@ -403,7 +432,8 @@
     async function addOrderToSheets() {
       const status = document.getElementById('status');
       status.textContent = `Добавление ${quantity} строк...`;
-      document.querySelector('.card[onclick="addOrderToSheets()"]').style.pointerEvents = 'none';
+      const confirmCard = document.querySelector('.card[onclick="addOrderToSheets()"]');
+      if (confirmCard) confirmCard.style.pointerEvents = 'none';
 
       try {
         const price = parseFloat(orderData.price) || 0;
@@ -435,17 +465,28 @@
           })
         });
 
-        if (!res.ok) throw new Error(`Сервер: ${res.status}`);
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Сервер: ${res.status} — ${errText}`);
+        }
 
-        const result = await res.json();
-        status.textContent = `Успешно добавлено ${result.count} строк!`;
+        status.textContent = `Успешно добавлено ${quantity} строк!`;
         document.getElementById('add-form').style.display = 'none';
+        setTimeout(() => { status.textContent = ''; }, 5000); // очищаем статус через 5 сек
         getOrders();
       } catch (err) {
         console.error(err);
         status.textContent = 'Ошибка: ' + err.message;
       } finally {
-        document.querySelector('.card[onclick="addOrderToSheets()"]').style.pointerEvents = 'auto';
+        if (confirmCard) confirmCard.style.pointerEvents = 'auto';
+      }
+    }
+
+    function toggleOrders() {
+      const list = document.getElementById('orders-list');
+      list.style.display = list.style.display === 'block' ? 'none' : 'block';
+      if (list.style.display === 'block') {
+        getOrders();
       }
     }
 
