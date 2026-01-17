@@ -629,9 +629,21 @@
           body: JSON.stringify({ initData: tg.initData })
         });
 
-        if (!res.ok) throw new Error('Ошибка загрузки аналитики');
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('Ошибка сервера:', res.status, errorText);
+          throw new Error(`Ошибка ${res.status}: ${errorText}`);
+        }
 
         const data = await res.json();
+        console.log('Данные аналитики:', data);
+
+        // Проверяем, что все нужные поля присутствуют
+        if (data.inTransitPaid === undefined || data.inPvzPaid === undefined || 
+            data.receivedTotal === undefined || data.sentTotal === undefined || 
+            data.marketWarehouseTotal === undefined || data.totalAmount === undefined) {
+          throw new Error('Неполные данные от сервера');
+        }
 
         document.getElementById('in-transit-paid').textContent = data.inTransitPaid + ' ₽';
         document.getElementById('in-pvz-paid').textContent = data.inPvzPaid + ' ₽';
@@ -641,7 +653,13 @@
         document.getElementById('total-amount').textContent = data.totalAmount + ' ₽';
 
       } catch (err) {
-        analyticsContent.innerHTML = '<p style="color:red; text-align:center;">Ошибка загрузки аналитики</p>';
+        console.error('Ошибка загрузки аналитики:', err);
+        analyticsContent.innerHTML = `
+          <p style="color:red; text-align:center; padding:20px;">
+            Ошибка загрузки аналитики<br>
+            <small>${err.message}</small>
+          </p>
+        `;
       }
     }
   </script>
