@@ -13,11 +13,11 @@
       --tg-theme-button-color: #0088cc;
       --tg-theme-button-text-color: #ffffff;
       --tg-theme-section-bg-color: #f5f5f5;
-      --wb-color: #7b2cbf;      /* фиолетовый Wildberries */
-      --ozon-color: #005bff;    /* синий Ozon */
-      --avito-color: #00cc66;   /* зелёный Avito */
-      --ym-color: #ffcc00;      /* жёлтый Яндекс Маркет */
-      --aliexpress-color: #ff6600; /* оранжевый Aliexpress */
+      --wb-color: #7b2cbf;
+      --ozon-color: #005bff;
+      --avito-color: #00cc66;
+      --ym-color: #ffcc00;
+      --aliexpress-color: #ff6600;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -79,7 +79,7 @@
       flex-shrink: 0;
     }
 
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 12px;
       margin: 8px 0;
@@ -126,7 +126,6 @@
 
     document.getElementById('user').textContent = tg.initDataUnsafe?.user?.first_name || 'пользователь';
 
-    // Автоматическая тема
     function applyTheme() {
       document.body.style.background = tg.backgroundColor;
       document.body.style.color = tg.textColor;
@@ -134,15 +133,13 @@
     applyTheme();
     tg.onEvent('themeChanged', applyTheme);
 
-    // Данные добавляемого заказа
     let orderData = {};
     let currentStep = 0;
-    let quantity = 1; // для нескольких строк
+    let quantity = 1;
 
     const steps = [
-      // 0: Магазин
       {
-        title: 'Выберите магазин',
+        title: 'Магазин',
         render: () => {
           const shops = [
             { name: 'Wildberries', color: 'var(--wb-color)' },
@@ -153,12 +150,12 @@
             { name: 'Другое', color: '#888888' }
           ];
           let html = '<div class="button-group">';
-          shops.forEach(shop => {
+          shops.forEach(s => {
             html += `
-              <button class="choice-btn ${orderData.shop === shop.name ? 'active' : ''}"
-                      onclick="selectShop('${shop.name}')">
-                <div class="color-dot" style="background:${shop.color}"></div>
-                ${shop.name}
+              <button class="choice-btn ${orderData.shop === s.name ? 'active' : ''}" 
+                      onclick="selectShop('${s.name}')">
+                <div class="color-dot" style="background:${s.color}"></div>
+                ${s.name}
               </button>`;
           });
           html += '</div>';
@@ -167,48 +164,47 @@
         validate: () => !!orderData.shop
       },
 
-      // 1: Номер заказа (только если НЕ Wildberries)
       {
         title: 'Номер заказа',
         render: () => {
           if (orderData.shop === 'Wildberries') {
-            orderData.orderNumber = '—'; // пропускаем
-            return '<p style="color:#888;">Для Wildberries номер заказа не требуется</p>';
+            orderData.orderNumber = '';
+            return '<p style="color:#888;">Для Wildberries не нужен</p>';
           }
-          return `<input type="text" id="order-num" placeholder="Введите номер заказа" value="${orderData.orderNumber || ''}">`;
+          return `<input type="text" id="order-num" placeholder="Номер заказа" value="${orderData.orderNumber || ''}">`;
         },
         validate: () => orderData.shop === 'Wildberries' || !!document.getElementById('order-num')?.value.trim(),
-        save: () => { if (orderData.shop !== 'Wildberries') orderData.orderNumber = document.getElementById('order-num').value.trim(); }
+        save: () => {
+          if (orderData.shop !== 'Wildberries') {
+            orderData.orderNumber = document.getElementById('order-num')?.value.trim() || '';
+          }
+        }
       },
 
-      // 2: Аккаунт
       {
         title: 'Аккаунт',
         render: () => {
-          const accounts = ['Артем', 'Лиза', 'Роберт', 'Максим', 'Мама', 'Миша', 'Кунак', 'Другое'];
+          const accs = ['Артем','Лиза','Роберт','Максим','Мама','Миша','Кунак','Другое'];
           let html = '<div class="button-group">';
-          accounts.forEach(acc => {
+          accs.forEach(a => {
             html += `
-              <button class="choice-btn ${orderData.account === acc ? 'active' : ''}"
-                      onclick="selectAccount('${acc}')">
-                ${acc}
-              </button>`;
+              <button class="choice-btn ${orderData.account === a ? 'active' : ''}" 
+                      onclick="selectAccount('${a}')">${a}</button>`;
           });
           html += '</div>';
           if (orderData.account === 'Другое') {
-            html += `<input type="text" id="account-other" placeholder="Введите аккаунт" value="${orderData.accountOther || ''}" style="margin-top:12px;">`;
+            html += `<input type="text" id="acc-other" placeholder="Введите аккаунт" value="${orderData.accountOther || ''}" style="margin-top:12px;">`;
           }
           return html;
         },
         validate: () => !!orderData.account && (orderData.account !== 'Другое' || !!orderData.accountOther),
         save: () => {
           if (orderData.account === 'Другое') {
-            orderData.account = document.getElementById('account-other')?.value.trim() || 'Другое';
+            orderData.account = document.getElementById('acc-other')?.value.trim() || 'Другое';
           }
         }
       },
 
-      // 3: Дата заказа
       {
         title: 'Дата заказа',
         render: () => {
@@ -232,7 +228,6 @@
         }
       },
 
-      // 4: Позиция
       {
         title: 'Позиция (товар)',
         render: () => `<input type="text" id="position" placeholder="Название товара" value="${orderData.position || ''}">`,
@@ -240,13 +235,12 @@
         save: () => orderData.position = document.getElementById('position').value.trim()
       },
 
-      // 5: Адрес ПВЗ
       {
         title: 'Адрес ПВЗ',
         render: () => {
-          let addresses = [];
+          let addrs = [];
           if (orderData.shop === 'Wildberries') {
-            addresses = [
+            addrs = [
               '1 Грайвороновский проезд 3',
               'Проспект Буденного 51к1',
               'Красноказарменная 15к1',
@@ -256,18 +250,16 @@
               'Другое'
             ];
           } else if (orderData.shop === 'Ozon') {
-            addresses = ['Пролетарский 2А', 'Другое'];
+            addrs = ['Пролетарский 2А', 'Другое'];
           } else {
-            addresses = ['Другое'];
+            addrs = ['Другое'];
           }
 
           let html = '<div class="button-group">';
-          addresses.forEach(addr => {
+          addrs.forEach(a => {
             html += `
-              <button class="choice-btn ${orderData.pvz === addr ? 'active' : ''}"
-                      onclick="selectPvz('${addr}')">
-                ${addr}
-              </button>`;
+              <button class="choice-btn ${orderData.pvz === a ? 'active' : ''}" 
+                      onclick="selectPvz('${a}')">${a}</button>`;
           });
           html += '</div>';
           if (orderData.pvz === 'Другое') {
@@ -283,60 +275,54 @@
         }
       },
 
-      // 6: Оплата
       {
         title: 'Оплата',
         render: () => {
-          const options = ['Оплачен', 'При получении'];
+          const opts = ['Оплачен', 'При получении'];
           let html = '<div class="button-group">';
-          options.forEach(opt => {
-            html += `<button class="choice-btn ${orderData.payment === opt ? 'active' : ''}" onclick="selectPayment('${opt}')">${opt}</button>`;
+          opts.forEach(o => {
+            html += `<button class="choice-btn ${orderData.payment === o ? 'active' : ''}" onclick="selectPayment('${o}')">${o}</button>`;
           });
           html += '</div>';
           return html;
         },
         validate: () => !!orderData.payment,
-        save: () => {} // уже сохранено в select
+        save: () => {}
       },
 
-      // 7: Цена
       {
-        title: 'Цена товара (₽)',
-        render: () => `<input type="number" id="price" placeholder="Цена за 1 шт" value="${orderData.price || ''}" min="1">`,
+        title: 'Цена за 1 шт (₽)',
+        render: () => `<input type="number" id="price" min="1" step="0.01" placeholder="Цена" value="${orderData.price || ''}">`,
         validate: () => {
-          const p = parseFloat(document.getElementById('price')?.value);
-          return !isNaN(p) && p > 0;
+          const v = parseFloat(document.getElementById('price')?.value);
+          return !isNaN(v) && v > 0;
         },
         save: () => orderData.price = parseFloat(document.getElementById('price').value)
       },
 
-      // 8: Количество
       {
-        title: 'Количество',
-        render: () => `<input type="number" id="quantity" placeholder="Сколько штук" value="${orderData.quantity || 1}" min="1">`,
+        title: 'Количество штук',
+        render: () => `<input type="number" id="quantity" min="1" placeholder="Количество" value="${quantity}">`,
         validate: () => {
-          const q = parseInt(document.getElementById('quantity')?.value || 1);
-          return q >= 1;
+          const v = parseInt(document.getElementById('quantity')?.value);
+          return !isNaN(v) && v >= 1;
         },
-        save: () => quantity = parseInt(document.getElementById('quantity').value || 1)
+        save: () => quantity = parseInt(document.getElementById('quantity').value)
       },
 
-      // 9: Подтверждение
       {
-        title: 'Подтвердите заказ',
-        render: () => {
-          return `
-            <p><strong>Магазин:</strong> ${orderData.shop}</p>
-            <p><strong>Аккаунт:</strong> ${orderData.account}</p>
-            <p><strong>Дата:</strong> ${orderData.date}</p>
-            <p><strong>Позиция:</strong> ${orderData.position}</p>
-            <p><strong>Адрес ПВЗ:</strong> ${orderData.pvz}</p>
-            <p><strong>Оплата:</strong> ${orderData.payment}</p>
-            <p><strong>Цена за шт:</strong> ${orderData.price} ₽</p>
-            <p><strong>Количество:</strong> ${quantity} шт</p>
-            <p><strong>Сумма:</strong> ${(orderData.price * quantity).toFixed(2)} ₽</p>
-          `;
-        },
+        title: 'Подтверждение',
+        render: () => `
+          <p><b>Магазин:</b> ${orderData.shop}</p>
+          <p><b>Аккаунт:</b> ${orderData.account}</p>
+          <p><b>Дата:</b> ${orderData.date}</p>
+          <p><b>Товар:</b> ${orderData.position}</p>
+          <p><b>ПВЗ:</b> ${orderData.pvz}</p>
+          <p><b>Оплата:</b> ${orderData.payment}</p>
+          <p><b>Цена за шт:</b> ${orderData.price} ₽</p>
+          <p><b>Количество:</b> ${quantity} шт</p>
+          <p><b>Итого сумма:</b> ${(orderData.price * quantity).toFixed(2)} ₽</p>
+        `,
         validate: () => true,
         isConfirm: true
       }
@@ -359,38 +345,18 @@
       nextBtn.textContent = currentStep === steps.length - 1 ? 'Добавить в таблицу' : 'Далее';
     }
 
-    window.selectShop = function(name) {
-      orderData.shop = name;
-      if (name !== 'Другое') renderCurrentStep();
-    };
-
-    window.selectAccount = function(acc) {
-      orderData.account = acc;
-      if (acc !== 'Другое') renderCurrentStep();
-      else renderCurrentStep(); // показываем поле
-    };
-
-    window.selectDate = function(date) {
-      orderData.date = date;
-      if (date !== 'other') renderCurrentStep();
-    };
-
-    window.selectPvz = function(addr) {
-      orderData.pvz = addr;
-      if (addr !== 'Другое') renderCurrentStep();
-    };
-
-    window.selectPayment = function(opt) {
-      orderData.payment = opt;
-      renderCurrentStep();
-    };
+    window.selectShop = function(name) { orderData.shop = name; renderCurrentStep(); };
+    window.selectAccount = function(acc) { orderData.account = acc; renderCurrentStep(); };
+    window.selectDate = function(d) { orderData.date = d; renderCurrentStep(); };
+    window.selectPvz = function(a) { orderData.pvz = a; renderCurrentStep(); };
+    window.selectPayment = function(o) { orderData.payment = o; renderCurrentStep(); };
 
     function nextStep() {
       const step = steps[currentStep];
       if (step.save) step.save();
 
       if (!step.validate()) {
-        document.getElementById('status').textContent = 'Заполните поле правильно';
+        document.getElementById('status').textContent = 'Заполните корректно';
         return;
       }
 
@@ -400,45 +366,46 @@
         currentStep++;
         renderCurrentStep();
       } else {
-        // Финал — отправляем в таблицу
         addOrderToSheets();
       }
     }
 
     async function addOrderToSheets() {
       const status = document.getElementById('status');
-      status.textContent = 'Добавление...';
+      status.textContent = `Добавление ${quantity} строк...`;
       document.getElementById('next-btn').disabled = true;
 
       try {
-        const sum = (orderData.price * quantity).toFixed(2);
+        const price = parseFloat(orderData.price);
+        const fullSum = (price * quantity).toFixed(2);
 
         for (let i = 0; i < quantity; i++) {
-          const payload = {
-            initData: tg.initData,
-            data: {
-              Магазин: orderData.shop,
-              'Номер заказа': orderData.orderNumber || '',
-              Аккаунт: orderData.account,
-              'Дата заказа': orderData.date,
-              Позиция: orderData.position,
-              'Адрес ПВЗ': orderData.pvz,
-              Статус: 'В пути',
-              Оплата: orderData.payment,
-              'Цена товара': orderData.price,
-              Количество: 1,
-              Сумма: i === 0 ? sum : orderData.price, // только в первой строке полная сумма
-              // остальные поля пустые
-            }
+          const row = {
+            Магазин: orderData.shop,
+            'Номер заказа': orderData.orderNumber || '',
+            Аккаунт: orderData.account,
+            'Дата заказа': orderData.date,
+            Позиция: orderData.position,
+            'Адрес ПВЗ': orderData.pvz,
+            Статус: 'В пути',
+            Оплата: orderData.payment,
+            'Цена товара': price,
+            Количество: 1,
+            Сумма: i === 0 ? fullSum : price.toFixed(2),
           };
 
-          const response = await fetch('/api/add-order', {
+          const res = await fetch('/api/add-order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+              initData: tg.initData,
+              data: row
+            })
           });
 
-          if (!response.ok) throw new Error('Ошибка добавления: ' + response.status);
+          if (!res.ok) {
+            throw new Error(`Ошибка на строке ${i+1}: ${res.status}`);
+          }
         }
 
         status.textContent = `Успешно добавлено ${quantity} строк!`;
@@ -452,10 +419,10 @@
       }
     }
 
-    // Функция загрузки заказов (без изменений)
+    // Функция загрузки заказов (вставь сюда свой актуальный код getOrders из предыдущей версии)
     async function getOrders() {
-      // ... (оставляем как было в предыдущей версии)
-      // Вставь сюда код getOrders из предыдущего index.html
+      // ... твой код getOrders ...
+      // если нужно — могу дать его заново
     }
   </script>
 </body>
