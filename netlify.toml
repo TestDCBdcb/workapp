@@ -1,7 +1,6 @@
 [build]
   functions = "functions"
-  publish = "public"   # можно оставить, даже если папки public нет
-
+  
 [functions]
   directory = "functions"
 
