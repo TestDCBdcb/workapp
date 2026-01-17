@@ -2,22 +2,27 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const crypto = require('crypto');
 
-// Кэш авторизации
+// Кэш авторизации (один раз на запуск функции)
 let doc = null;
 
 async function getDoc() {
   if (doc) return doc;
 
-  const auth = new JWT({
-    email: process.env.CLIENT_EMAIL,
-    key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n'),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
+  try {
+    const auth = new JWT({
+      email: process.env.CLIENT_EMAIL,
+      key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n'),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
 
-  doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID, auth);
-  await doc.loadInfo();
-  console.log('Google Sheets инициализирован');
-  return doc;
+    doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID, auth);
+    await doc.loadInfo();
+    console.log('Google Sheets инициализирован');
+    return doc;
+  } catch (err) {
+    console.error('Ошибка инициализации doc:', err.message);
+    throw err;
+  }
 }
 
 function validateInitData(initData, botToken) {
@@ -64,34 +69,31 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: 'Invalid initData signature' };
     }
 
-    const currentRowCount = sheet.rowCount; // общее количество строк (включая заголовок)
+    const currentRowCount = sheet.rowCount; // всего строк (включая заголовок)
 
     if (currentRowCount <= 1) {
-      // Таблица пустая или только заголовок — просто добавляем строки
+      // Только заголовок или пусто — просто добавляем
       await sheet.addRows(rows);
+      console.log(`Добавлено ${rows.length} строк в пустую таблицу`);
     } else {
-      // Копируем форматирование из последней заполненной строки
-      const sourceRowIndex = currentRowCount; // индекс последней строки (1-based)
+      // Есть данные — вставляем новые строки после последней
+      const insertStart = currentRowCount; // после последней строки (0-based индекс)
 
-      // Загружаем ячейки последней строки для копирования стилей
-      await sheet.loadCells(`A${sourceRowIndex}:AG${sourceRowIndex}`);
-
-      // Вставляем новые строки с наследованием форматирования от предыдущей
+      // Вставляем строки с наследованием форматирования от предыдущей строки
       await sheet.insertDimension('ROWS', {
         sheetId: sheet.sheetId,
         dimension: {
-          sheetId: sheet.sheetId,
-          startIndex: currentRowCount, // после последней строки
-          endIndex: currentRowCount + rows.length
+          startIndex: insertStart,
+          endIndex: insertStart + rows.length
         },
         inheritFromBefore: true // копирует форматирование, validation, цвета и т.д.
       });
 
       // Заполняем значения в новых строках
       await sheet.addRows(rows);
-    }
 
-    console.log(`Успешно добавлено ${rows.length} строк с сохранением форматирования`);
+      console.log(`Добавлено ${rows.length} строк с наследованием форматирования`);
+    }
 
     return {
       statusCode: 200,
