@@ -1,0 +1,8 @@
+{
+  "name": "workapp-miniapp",
+  "version": "1.0.0",
+  "dependencies": {
+    "google-spreadsheet": "^4.1.1",
+    "crypto": "^1.0.1"
+  }
+}
