@@ -17,6 +17,8 @@
       --avito: #00cc66;
       --ym: #ffcc00;
       --aliexpress: #ff6600;
+      --paid: #00cc66;
+      --unpaid: #ff6600;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -25,6 +27,8 @@
         --text: #e0e0e0;
         --hint: #9ca3af;
         --card: #1a2332;
+        --paid: #00cc66;
+        --unpaid: #ff6600;
       }
     }
 
@@ -251,12 +255,15 @@
 
     .pvz-group {
       margin-bottom: 24px;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
     }
 
     .pvz-title {
       font-size: 20px;
       font-weight: 600;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
       color: var(--accent);
       display: flex;
       justify-content: space-between;
@@ -270,10 +277,34 @@
       text-align: center;
     }
 
-    .position-item {
-      background: var(--card);
+    .payment-group {
+      margin-bottom: 16px;
+      padding: 12px;
+      background: rgba(0,0,0,0.03);
       border-radius: 12px;
-      padding: 16px;
+    }
+
+    .payment-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .payment-paid {
+      color: var(--paid);
+    }
+
+    .payment-unpaid {
+      color: var(--unpaid);
+    }
+
+    .position-item {
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 14px;
       margin-bottom: 8px;
       display: flex;
       justify-content: space-between;
@@ -301,6 +332,26 @@
       font-weight: 600;
       color: var(--accent);
       margin-left: 12px;
+    }
+
+    .empty-pvz-list {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .empty-pvz-title {
+      font-size: 18px;
+      color: var(--hint);
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .empty-pvz-item {
+      color: var(--hint);
+      padding: 8px;
+      text-align: center;
+      font-style: italic;
     }
 
     .bottom-panel {
@@ -661,7 +712,7 @@
         status.textContent = `Успешно добавлено ${quantity} строк!`;
         document.getElementById('add-form').style.display = 'none';
         setTimeout(() => { status.textContent = ''; }, 5000); // очищаем статус через 5 сек
-        getOrders();
+        showStatusSelection();
       } catch (err) {
         console.error(err);
         status.textContent = 'Ошибка: ' + err.message;
@@ -772,203 +823,189 @@
         return;
       }
 
-      // Группируем по ПВЗ для статуса "В ПВЗ", для других статусов группируем по позициям
       let html = `<div class="step-title">${status}</div>`;
       
-      if (status.toLowerCase().includes('пвз')) {
-        // Для ПВЗ группируем по адресу ПВЗ
+      // Определяем, нужно ли группировать по ПВЗ
+      const shouldGroupByPvz = status.toLowerCase().includes('пвз') || status.toLowerCase().includes('в пути');
+      
+      if (shouldGroupByPvz) {
+        // Для ПВЗ и "В пути" группируем по адресу ПВЗ
         const pvzGroups = {};
+        const allPvzAddresses = new Set();
+        
+        // Сначала собираем все уникальные адреса ПВЗ
+        allOrders.forEach(order => {
+          if (order['Адрес ПВЗ']) {
+            allPvzAddresses.add(order['Адрес ПВЗ']);
+          }
+        });
+        
+        // Группируем заказы по ПВЗ и оплате
         filteredOrders.forEach(order => {
           const pvz = order['Адрес ПВЗ'] || 'Не указан';
           const position = order['Позиция'] || 'Не указано';
           const quantity = parseInt(order['Количество']) || 1;
           const sum = parseFloat(order['Сумма']) || 0;
+          const payment = order['Оплата'] || 'Не указано';
+          const isPaid = payment.toLowerCase().includes('оплачен');
           
           if (!pvzGroups[pvz]) {
-            pvzGroups[pvz] = {};
+            pvzGroups[pvz] = {
+              paid: {},
+              unpaid: {}
+            };
           }
           
-          if (!pvzGroups[pvz][position]) {
-            pvzGroups[pvz][position] = {
+          const paymentGroup = isPaid ? pvzGroups[pvz].paid : pvzGroups[pvz].unpaid;
+          
+          if (!paymentGroup[position]) {
+            paymentGroup[position] = {
               count: 0,
               totalSum: 0
             };
           }
           
-          pvzGroups[pvz][position].count += quantity;
-          pvzGroups[pvz][position].totalSum += sum;
+          paymentGroup[position].count += quantity;
+          paymentGroup[position].totalSum += sum;
         });
 
         // Создаем группы для каждого ПВЗ
-        Object.entries(pvzGroups).forEach(([pvz, positions]) => {
-          const positionEntries = Object.entries(positions);
-          const totalItems = positionEntries.reduce((sum, [_, data]) => sum + data.count, 0);
-          const totalAmount = positionEntries.reduce((sum, [_, data]) => sum + data.totalSum, 0);
+        let hasItems = false;
+        Object.entries(pvzGroups).forEach(([pvz, groups]) => {
+          const paidItems = Object.entries(groups.paid);
+          const unpaidItems = Object.entries(groups.unpaid);
+          const totalPaidItems = paidItems.reduce((sum, [_, data]) => sum + data.count, 0);
+          const totalUnpaidItems = unpaidItems.reduce((sum, [_, data]) => sum + data.count, 0);
+          const totalPaidSum = paidItems.reduce((sum, [_, data]) => sum + data.totalSum, 0);
+          const totalUnpaidSum = unpaidItems.reduce((sum, [_, data]) => sum + data.totalSum, 0);
           
-          html += `
-            <div class="pvz-group">
-              <div class="pvz-title">
-                <span>${pvz}</span>
-                <span>${totalItems} шт. • ${totalAmount.toLocaleString('ru-RU')} ₽</span>
-              </div>
-          `;
-          
-          if (positionEntries.length === 0) {
-            html += `<div class="pvz-empty">Нет товаров на этом ПВЗ</div>`;
-          } else {
-            positionEntries.forEach(([position, data]) => {
-              html += `
-                <div class="position-item">
-                  <div class="position-name">${position}</div>
-                  <div class="position-count">${data.count} шт.</div>
-                  <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
+          // Показываем ПВЗ только если есть товары
+          if (totalPaidItems > 0 || totalUnpaidItems > 0) {
+            hasItems = true;
+            html += `
+              <div class="pvz-group">
+                <div class="pvz-title">
+                  <span>${pvz}</span>
+                  <span>${totalPaidItems + totalUnpaidItems} шт.</span>
                 </div>
+            `;
+            
+            // Оплаченные товары
+            if (totalPaidItems > 0) {
+              html += `
+                <div class="payment-group">
+                  <div class="payment-title payment-paid">
+                    <span>Оплаченные</span>
+                    <span>${totalPaidItems} шт. • ${totalPaidSum.toLocaleString('ru-RU')} ₽</span>
+                  </div>
               `;
-            });
+              
+              paidItems.forEach(([position, data]) => {
+                html += `
+                  <div class="position-item">
+                    <div class="position-name">${position}</div>
+                    <div class="position-count">${data.count} шт.</div>
+                    <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
+                  </div>
+                `;
+              });
+              
+              html += `</div>`;
+            }
+            
+            // Неоплаченные товары
+            if (totalUnpaidItems > 0) {
+              html += `
+                <div class="payment-group">
+                  <div class="payment-title payment-unpaid">
+                    <span>Неоплаченные</span>
+                    <span>${totalUnpaidItems} шт. • ${totalUnpaidSum.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+              `;
+              
+              unpaidItems.forEach(([position, data]) => {
+                html += `
+                  <div class="position-item">
+                    <div class="position-name">${position}</div>
+                    <div class="position-count">${data.count} шт.</div>
+                    <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
+                  </div>
+                `;
+              });
+              
+              html += `</div>`;
+            }
+            
+            html += `</div>`;
           }
-          
-          html += `</div>`;
         });
 
+        // Если нет товаров в этом статусе на ПВЗ
+        if (!hasItems) {
+          html += `<p style="text-align:center; color:var(--hint); padding:20px;">Нет товаров в этом статусе</p>`;
+        }
+
+        // Список пустых ПВЗ
+        const emptyPvz = Array.from(allPvzAddresses).filter(pvz => 
+          !pvzGroups[pvz] || 
+          (Object.keys(pvzGroups[pvz].paid).length === 0 && 
+           Object.keys(pvzGroups[pvz].unpaid).length === 0)
+        );
+
+        if (emptyPvz.length > 0) {
+          html += `
+            <div class="empty-pvz-list">
+              <div class="empty-pvz-title">Пустые ПВЗ в этом статусе:</div>
+          `;
+          
+          emptyPvz.forEach(pvz => {
+            html += `<div class="empty-pvz-item">${pvz}</div>`;
+          });
+          
+          html += `</div>`;
+        }
+
       } else {
-        // Для других статусов группируем просто по позициям
-        const positionGroups = {};
+        // Для других статусов группируем просто по позициям и оплате
+        const positionGroups = {
+          paid: {},
+          unpaid: {}
+        };
+        
         filteredOrders.forEach(order => {
           const position = order['Позиция'] || 'Не указано';
           const quantity = parseInt(order['Количество']) || 1;
           const sum = parseFloat(order['Сумма']) || 0;
+          const payment = order['Оплата'] || 'Не указано';
+          const isPaid = payment.toLowerCase().includes('оплачен');
           
-          if (!positionGroups[position]) {
-            positionGroups[position] = {
+          const paymentGroup = isPaid ? positionGroups.paid : positionGroups.unpaid;
+          
+          if (!paymentGroup[position]) {
+            paymentGroup[position] = {
               count: 0,
               totalSum: 0
             };
           }
           
-          positionGroups[position].count += quantity;
-          positionGroups[position].totalSum += sum;
+          paymentGroup[position].count += quantity;
+          paymentGroup[position].totalSum += sum;
         });
 
         // Показываем общую статистику
-        const totalItems = Object.values(positionGroups).reduce((sum, data) => sum + data.count, 0);
-        const totalAmount = Object.values(positionGroups).reduce((sum, data) => sum + data.totalSum, 0);
+        const totalPaidItems = Object.values(positionGroups.paid).reduce((sum, data) => sum + data.count, 0);
+        const totalUnpaidItems = Object.values(positionGroups.unpaid).reduce((sum, data) => sum + data.count, 0);
+        const totalPaidSum = Object.values(positionGroups.paid).reduce((sum, data) => sum + data.totalSum, 0);
+        const totalUnpaidSum = Object.values(positionGroups.unpaid).reduce((sum, data) => sum + data.totalSum, 0);
         
         html += `
           <div style="text-align:center; margin-bottom:20px; color:var(--hint);">
-            Всего: ${totalItems} шт. на сумму ${totalAmount.toLocaleString('ru-RU')} ₽
+            Всего: ${totalPaidItems + totalUnpaidItems} шт. на сумму ${(totalPaidSum + totalUnpaidSum).toLocaleString('ru-RU')} ₽
           </div>
         `;
 
-        // Создаем список позиций
-        Object.entries(positionGroups).forEach(([position, data]) => {
+        // Оплаченные товары
+        if (totalPaidItems > 0) {
           html += `
-            <div class="position-item">
-              <div class="position-name">${position}</div>
-              <div class="position-count">${data.count} шт.</div>
-              <div class="position-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
-            </div>
-          `;
-        });
-      }
-
-      statusDetails.innerHTML = html;
-    }
-
-    function toggleAnalyticsDetails() {
-      analyticsExpanded = !analyticsExpanded;
-      
-      const mainCard = document.getElementById('analytics-main-card');
-      const details = document.getElementById('analytics-details');
-      const arrow = document.getElementById('analytics-arrow');
-      
-      if (analyticsExpanded) {
-        mainCard.classList.add('expanded');
-        details.classList.add('expanded');
-        arrow.classList.add('expanded');
-      } else {
-        mainCard.classList.remove('expanded');
-        details.classList.remove('expanded');
-        arrow.classList.remove('expanded');
-      }
-    }
-
-    async function getAnalytics() {
-      const analyticsContent = document.getElementById('analytics-content');
-      analyticsContent.innerHTML = '<p style="text-align:center; color:var(--hint);">Загрузка аналитики...</p>';
-
-      try {
-        const res = await fetch('/api/analytics', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ initData: tg.initData })
-        });
-
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error('Ошибка сервера:', res.status, errorText);
-          throw new Error(`Ошибка ${res.status}: ${errorText}`);
-        }
-
-        const data = await res.json();
-        console.log('Данные аналитики:', data);
-
-        // Проверяем, что все нужные поля присутствуют
-        if (data.inTransitPaid === undefined || data.inPvzPaid === undefined || 
-            data.receivedTotal === undefined || data.sentTotal === undefined || 
-            data.marketWarehouseTotal === undefined || data.totalAmount === undefined) {
-          throw new Error('Неполные данные от сервера');
-        }
-
-        // Создаем HTML для аналитики с выезжающими деталями
-        const analyticsHTML = `
-          <div class="analytics-main-card" id="analytics-main-card" onclick="toggleAnalyticsDetails()">
-            <div class="analytics-main-title">
-              Всего денег в товаре
-              <span class="arrow-icon" id="analytics-arrow">▼</span>
-            </div>
-            <div class="analytics-main-amount">${data.totalAmount} ₽</div>
-            <div class="analytics-main-subtitle">Нажмите для детализации</div>
-          </div>
-          <div class="analytics-details" id="analytics-details">
-            <div class="analytics-item">
-              <span class="analytics-label">В пути (оплаченные):</span>
-              <span class="analytics-value">${data.inTransitPaid} ₽</span>
-            </div>
-            <div class="analytics-item">
-              <span class="analytics-label">В ПВЗ (оплаченные):</span>
-              <span class="analytics-value">${data.inPvzPaid} ₽</span>
-            </div>
-            <div class="analytics-item">
-              <span class="analytics-label">Полученные:</span>
-              <span class="analytics-value">${data.receivedTotal} ₽</span>
-            </div>
-            <div class="analytics-item">
-              <span class="analytics-label">Отправленные:</span>
-              <span class="analytics-value">${data.sentTotal} ₽</span>
-            </div>
-            <div class="analytics-item">
-              <span class="analytics-label">На складе Маркета:</span>
-              <span class="analytics-value">${data.marketWarehouseTotal} ₽</span>
-            </div>
-            <div style="margin-top: 20px; color: var(--hint); font-size: 14px; text-align: center;">
-              * Учитываются только соответствующие статусы
-            </div>
-          </div>
-        `;
-
-        analyticsContent.innerHTML = analyticsHTML;
-        analyticsExpanded = false; // Сбрасываем состояние при загрузке
-
-      } catch (err) {
-        console.error('Ошибка загрузки аналитики:', err);
-        analyticsContent.innerHTML = `
-          <p style="color:red; text-align:center; padding:20px;">
-            Ошибка загрузки аналитики<br>
-            <small>${err.message}</small>
-          </p>
-        `;
-      }
-    }
-  </script>
-</body>
-</html>
+            <div class="payment-group">
+              <div class="payment-title payment
