@@ -13,11 +13,11 @@
       --tg-theme-button-color: #0088cc;
       --tg-theme-button-text-color: #ffffff;
       --tg-theme-section-bg-color: #f5f5f5;
-      --wb-color: #7b2cbf;      /* фиолетовый Wildberries */
-      --ozon-color: #005bff;    /* синий Ozon */
-      --avito-color: #00cc66;   /* зелёный Avito */
-      --ym-color: #ffcc00;      /* жёлтый Яндекс Маркет */
-      --aliexpress-color: #ff6600; /* оранжевый Aliexpress */
+      --wb-color: #7b2cbf;
+      --ozon-color: #005bff;
+      --avito-color: #00cc66;
+      --ym-color: #ffcc00;
+      --aliexpress-color: #ff6600;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -36,12 +36,11 @@
       background: var(--tg-theme-bg-color);
       color: var(--tg-theme-text-color);
       min-height: 100vh;
-      line-height: 1.4;
     }
 
     .container { max-width: 900px; margin: 0 auto; }
-    h1 { margin: 0 0 16px; font-size: 24px; font-weight: 600; }
-    .greeting { margin-bottom: 24px; color: var(--tg-theme-hint-color); font-size: 15px; }
+    h1 { margin: 0 0 16px; font-size: 24px; }
+    .greeting { margin-bottom: 20px; color: var(--tg-theme-hint-color); }
 
     .step-title {
       font-size: 18px;
@@ -80,7 +79,7 @@
       flex-shrink: 0;
     }
 
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 12px;
       margin: 8px 0;
@@ -322,9 +321,10 @@
           <p><b>Оплата:</b> ${orderData.payment}</p>
           <p><b>Цена за шт:</b> ${orderData.price} ₽</p>
           <p><b>Количество:</b> ${quantity} шт</p>
-          <p><b>Сумма за строку:</b> ${(orderData.price || 0).toFixed(2)} ₽</p>
+          <p><b>Итого сумма:</b> ${(orderData.price * quantity).toFixed(2)} ₽</p>
         `,
-        validate: () => true
+        validate: () => true,
+        isConfirm: true
       }
     ];
 
@@ -377,7 +377,7 @@
 
       try {
         const price = parseFloat(orderData.price);
-        const singleSum = price.toFixed(2); // сумма всегда за одну штуку
+        const singleSum = price.toFixed(2);
 
         const rows = [];
         for (let i = 0; i < quantity; i++) {
@@ -392,7 +392,7 @@
             Оплата: orderData.payment,
             'Цена товара': price,
             Количество: 1,
-            Сумма: singleSum  // всегда одна и та же сумма за штуку
+            Сумма: singleSum,
           });
         }
 
@@ -422,7 +422,6 @@
       }
     }
 
-    // Функция загрузки заказов (базовая версия)
     async function getOrders() {
       const status = document.getElementById('status');
       const list = document.getElementById('orders-list');
