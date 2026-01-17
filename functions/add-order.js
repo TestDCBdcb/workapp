@@ -64,36 +64,38 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: 'Invalid initData signature' };
     }
 
-    const currentRowCount = sheet.rowCount;
+    const currentRowCount = sheet.rowCount; // общее количество строк (включая заголовок)
 
-    if (currentRowCount < 2) {
-      // Таблица почти пустая — просто добавляем
+    if (currentRowCount <= 1) {
+      // Таблица пустая или только заголовок — просто добавляем строки
       await sheet.addRows(rows);
     } else {
-      // Копируем форматирование из последней строки (rowCount начинается с 1)
-      const sourceRowIndex = currentRowCount - 1; // последняя заполненная строка
+      // Копируем форматирование из последней заполненной строки
+      const sourceRowIndex = currentRowCount; // индекс последней строки (1-based)
 
       // Загружаем ячейки последней строки для копирования стилей
       await sheet.loadCells(`A${sourceRowIndex}:AG${sourceRowIndex}`);
 
-      // Добавляем новые строки (с копированием форматирования от предыдущей)
+      // Вставляем новые строки с наследованием форматирования от предыдущей
       await sheet.insertDimension('ROWS', {
         sheetId: sheet.sheetId,
         dimension: {
-          startIndex: currentRowCount,
+          sheetId: sheet.sheetId,
+          startIndex: currentRowCount, // после последней строки
           endIndex: currentRowCount + rows.length
         },
-        inheritFromBefore: true // ← это ключевой параметр для копирования форматирования!
+        inheritFromBefore: true // копирует форматирование, validation, цвета и т.д.
       });
 
       // Заполняем значения в новых строках
       await sheet.addRows(rows);
     }
 
-    console.log(`Успешно добавлено ${rows.length} строк с форматированием`);
+    console.log(`Успешно добавлено ${rows.length} строк с сохранением форматирования`);
 
     return {
       statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ success: true, count: rows.length })
     };
   } catch (err) {
