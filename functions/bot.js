@@ -1,5 +1,5 @@
-import { Telegraf } from 'telegraf';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
+const { Telegraf } = require('telegraf');
+const { GoogleSpreadsheet } = require('google-spreadsheet');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -14,18 +14,17 @@ async function getSheet() {
 }
 
 bot.start((ctx) => ctx.reply(
-  'Привет! Бот для работы с заказами\n\n' +
-  'Команды:\n' +
+  'Привет! Бот для заказов\n\n' +
   '/add — добавить заказ пошагово\n' +
-  '/list — последние 10 заказов\n' +
+  '/list — последние 10\n' +
   '/stats — статистика'
 ));
 
-const conversations = new Map(); // храним состояние добавления для каждого пользователя
+const conversations = new Map();
 
 bot.command('add', async (ctx) => {
   conversations.set(ctx.from.id, { step: 0, data: {} });
-  await ctx.reply('Начинаем добавление заказа.\n\n1. Магазин (например, Wildberries)');
+  await ctx.reply('1. Магазин (например, Wildberries)');
 });
 
 bot.on('text', async (ctx) => {
@@ -53,10 +52,10 @@ bot.on('text', async (ctx) => {
     try {
       const sheet = await getSheet();
       await sheet.addRow(state.data);
-      await ctx.reply('Заказ успешно добавлен! ✅');
+      await ctx.reply('Заказ добавлен! ✅');
     } catch (err) {
       console.error(err);
-      await ctx.reply('Ошибка при сохранении. Проверь настройки в Netlify.');
+      await ctx.reply('Ошибка сохранения');
     }
     conversations.delete(userId);
   }
@@ -66,16 +65,16 @@ bot.command('list', async (ctx) => {
   try {
     const sheet = await getSheet();
     const rows = await sheet.getRows({ limit: 10 });
-    if (rows.length === 0) return ctx.reply('Заказов пока нет');
+    if (rows.length === 0) return ctx.reply('Нет заказов');
 
-    let msg = 'Последние 10 заказов:\n\n';
+    let msg = 'Последние 10:\n\n';
     rows.forEach((r, i) => {
       msg += `${i+1}. ${r['Дата заказа']} – ${r['Позиция']} (${r['Количество']} шт)\n` +
-             `   Сумма: ${r['Сумма']} | ${r['Покупатель']}\n\n`;
+             `   Сумма: ${r['Сумма']}\n\n`;
     });
     ctx.reply(msg);
   } catch (err) {
-    ctx.reply('Ошибка чтения таблицы');
+    ctx.reply('Ошибка');
   }
 });
 
@@ -92,24 +91,24 @@ bot.command('stats', async (ctx) => {
     const avg = count ? (sum / count).toFixed(2) : 0;
 
     ctx.reply(
-      `Статистика:\n\n` +
+      `Статистика:\n` +
       `Заказов: ${count}\n` +
-      `Сумма продаж: ${sum.toFixed(2)} ₽\n` +
+      `Сумма: ${sum.toFixed(2)} ₽\n` +
       `Прибыль: ${profit.toFixed(2)} ₽\n` +
       `Средний чек: ${avg} ₽`
     );
   } catch (err) {
-    ctx.reply('Ошибка статистики');
+    ctx.reply('Ошибка');
   }
 });
 
-export default async (req) => {
+exports.handler = async (event) => {
   try {
-    const update = await req.json();
-    await bot.handleUpdate(update);
-    return new Response('', { status: 200 });
+    const body = JSON.parse(event.body || '{}');
+    await bot.handleUpdate(body);
+    return { statusCode: 200 };
   } catch (e) {
     console.error(e);
-    return new Response('Error', { status: 500 });
+    return { statusCode: 500 };
   }
 };
