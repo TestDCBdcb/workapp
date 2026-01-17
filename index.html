@@ -19,6 +19,7 @@
       --aliexpress: #ff6600;
       --paid: #00cc66;
       --unpaid: #ff6600;
+      --border: rgba(0,0,0,0.1);
     }
 
     @media (prefers-color-scheme: dark) {
@@ -29,6 +30,7 @@
         --card: #1a2332;
         --paid: #00cc66;
         --unpaid: #ff6600;
+        --border: rgba(255,255,255,0.1);
       }
     }
 
@@ -37,10 +39,11 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
       min-height: 100vh;
       padding: 16px;
       padding-bottom: 120px;
+      -webkit-font-smoothing: antialiased;
     }
 
     .container { max-width: 600px; margin: 0 auto; }
@@ -80,49 +83,53 @@
     .step-title {
       font-size: 22px;
       font-weight: 600;
-      margin: 0 0 20px;
+      margin: 0 0 24px;
       text-align: center;
     }
 
     .card {
       background: var(--card);
-      border-radius: 20px;
-      padding: 24px;
-      margin-bottom: 16px;
-      font-size: 20px;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
+      font-size: 18px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
       display: flex;
       align-items: center;
       gap: 20px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
       user-select: none;
     }
 
     .card:active {
       transform: scale(0.98);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
     }
 
     .status-card {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding: 18px 20px;
     }
 
     .status-count {
       background: var(--accent);
       color: white;
       border-radius: 12px;
-      padding: 4px 12px;
+      padding: 6px 14px;
       font-size: 16px;
       font-weight: 600;
+      min-width: 40px;
+      text-align: center;
     }
 
     .color-dot {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       flex-shrink: 0;
     }
@@ -132,10 +139,16 @@
       padding: 18px;
       font-size: 18px;
       border-radius: 16px;
-      border: 1px solid #ccc;
+      border: 1px solid var(--border);
       background: var(--card);
       color: var(--text);
       margin: 12px 0;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0,136,204,0.2);
     }
 
     #status {
@@ -154,6 +167,7 @@
       display: none; 
     }
 
+    /* Аналитика */
     .analytics-main-card {
       background: var(--card);
       border-radius: 20px;
@@ -162,6 +176,7 @@
       cursor: pointer;
       transition: all 0.3s ease;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
       user-select: none;
     }
 
@@ -181,7 +196,7 @@
     }
 
     .analytics-main-amount {
-      font-size: 28px;
+      font-size: 32px;
       font-weight: 700;
       color: var(--accent);
       text-align: center;
@@ -203,6 +218,8 @@
       overflow: hidden;
       transition: all 0.3s ease;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
+      border-top: none;
     }
 
     .analytics-details.expanded {
@@ -216,7 +233,7 @@
       justify-content: space-between;
       margin-bottom: 12px;
       padding: 12px 0;
-      border-bottom: 1px solid rgba(0,0,0,0.1);
+      border-bottom: 1px solid var(--border);
     }
 
     .analytics-item:last-child {
@@ -244,128 +261,211 @@
       transform: rotate(180deg);
     }
 
-    /* Стили для таблиц */
-    .table-container {
+    /* Плашки ПВЗ */
+    .pvz-block {
       background: var(--card);
       border-radius: 20px;
-      padding: 0;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
       overflow: hidden;
-      border: 1px solid rgba(0,0,0,0.1);
     }
 
-    .table-header {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--accent);
-      padding: 16px;
-      text-align: center;
-      border-bottom: 1px solid rgba(0,0,0,0.1);
+    .pvz-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
       background: rgba(0,136,204,0.05);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
     }
 
-    .table-summary {
+    .pvz-title {
       font-size: 18px;
       font-weight: 600;
       color: var(--accent);
-      padding: 12px 16px;
-      text-align: center;
-      background: rgba(0,136,204,0.1);
-      border-bottom: 1px solid rgba(0,0,0,0.1);
-    }
-
-    .table-summary-item {
       margin-bottom: 8px;
     }
 
-    .table-summary-item:last-child {
-      margin-bottom: 0;
+    .pvz-summary {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
     }
 
-    .table-row {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr;
-      gap: 12px;
-      padding: 8px 16px;
-      border-bottom: 1px solid rgba(0,0,0,0.1);
-      align-items: center;
-    }
-
-    .table-row:last-child {
-      border-bottom: none;
-    }
-
-    .table-cell {
-      font-size: 16px;
-    }
-
-    .table-cell-name {
-      font-weight: 500;
-    }
-
-    .table-cell-count {
-      text-align: center;
-      font-weight: 600;
-    }
-
-    .table-cell-amount {
-      text-align: right;
-      font-weight: 600;
-      color: var(--accent);
-    }
-
-    /* Стили для ПВЗ */
-    .payment-section {
+    .payment-group {
       padding: 0;
     }
 
     .payment-header {
-      color: var(--paid);
+      padding: 16px 20px;
       font-weight: 600;
-      padding: 12px 16px;
-      border-bottom: 1px solid rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
     }
 
-    .payment-unpaid .payment-header {
+    .payment-header.paid {
+      color: var(--paid);
+      background: rgba(0,204,102,0.05);
+    }
+
+    .payment-header.unpaid {
       color: var(--unpaid);
+      background: rgba(255,102,0,0.05);
     }
 
+    .positions-list {
+      padding: 0;
+    }
+
+    .position-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .position-item:last-child {
+      border-bottom: none;
+    }
+
+    .position-name {
+      font-size: 16px;
+      font-weight: 500;
+      flex: 1;
+      margin-right: 16px;
+    }
+
+    .position-details {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .position-count {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--hint);
+      min-width: 50px;
+      text-align: right;
+    }
+
+    .position-amount {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 80px;
+      text-align: right;
+    }
+
+    /* Для других статусов (не ПВЗ) */
+    .status-summary {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
+    }
+
+    .status-total {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .status-items-count {
+      font-size: 16px;
+      color: var(--hint);
+    }
+
+    .position-block {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
+    }
+
+    .position-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .position-block-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .position-block-total {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .position-block-details {
+      display: flex;
+      justify-content: space-between;
+      font-size: 16px;
+      color: var(--hint);
+    }
+
+    /* Утилиты */
     .loading-spinner {
       text-align: center;
-      padding: 20px;
+      padding: 40px 20px;
       color: var(--hint);
     }
 
     .spinner {
       display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 2px solid var(--hint);
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--hint);
       border-radius: 50%;
       border-top-color: var(--accent);
       animation: spin 1s linear infinite;
-      margin-right: 10px;
+      margin-right: 12px;
+      vertical-align: middle;
     }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
 
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--hint);
+      font-size: 16px;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0;
+      border: none;
+    }
+
+    /* Нижняя панель */
     .bottom-panel {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
       background: var(--bg);
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 -2px 20px rgba(0,0,0,0.15);
       padding: 12px 16px;
       display: flex;
       gap: 8px;
       z-index: 1000;
+      border-top: 1px solid var(--border);
     }
 
     .bottom-btn {
@@ -376,12 +476,14 @@
       border-radius: 16px;
       border: none;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
       background: var(--accent);
       color: white;
+      box-shadow: 0 2px 8px rgba(0,136,204,0.3);
     }
 
     .bottom-btn:hover { opacity: 0.9; }
+    .bottom-btn:active { transform: scale(0.98); }
   </style>
 </head>
 <body>
@@ -593,16 +695,16 @@
       {
         title: 'Подтвердить',
         render: () => `
-          <div style="padding:20px; background:var(--card); border-radius:16px; margin-bottom:24px;">
-            <p><b>Магазин:</b> ${orderData.shop}</p>
-            <p><b>Аккаунт:</b> ${orderData.account}</p>
-            <p><b>Дата:</b> ${orderData.date}</p>
-            <p><b>Товар:</b> ${orderData.position}</p>
-            <p><b>ПВЗ:</b> ${orderData.pvz}</p>
-            <p><b>Оплата:</b> ${orderData.payment}</p>
-            <p><b>Цена за шт:</b> ${orderData.price} ₽</p>
-            <p><b>Количество:</b> ${quantity} шт</p>
-            <p><b>Сумма за строку:</b> ${(orderData.price || 0).toFixed(2)} ₽</p>
+          <div style="padding:20px; background:var(--card); border-radius:16px; margin-bottom:24px; border:1px solid var(--border);">
+            <p style="margin-bottom:12px;"><b>Магазин:</b> ${orderData.shop}</p>
+            <p style="margin-bottom:12px;"><b>Аккаунт:</b> ${orderData.account}</p>
+            <p style="margin-bottom:12px;"><b>Дата:</b> ${orderData.date}</p>
+            <p style="margin-bottom:12px;"><b>Товар:</b> ${orderData.position}</p>
+            <p style="margin-bottom:12px;"><b>ПВЗ:</b> ${orderData.pvz}</p>
+            <p style="margin-bottom:12px;"><b>Оплата:</b> ${orderData.payment}</p>
+            <p style="margin-bottom:12px;"><b>Цена за шт:</b> ${orderData.price} ₽</p>
+            <p style="margin-bottom:12px;"><b>Количество:</b> ${quantity} шт</p>
+            <p style="margin-bottom:12px;"><b>Сумма за строку:</b> ${(orderData.price || 0).toFixed(2)} ₽</p>
           </div>
           <div class="card" onclick="addOrderToSheets()" style="justify-content:center; font-weight:600; font-size:20px;">
             Добавить в таблицу
@@ -780,9 +882,7 @@
       if (filteredOrders.length === 0) {
         statusDetails.innerHTML = `
           <div class="step-title">${status}</div>
-          <p style="text-align:center; color:var(--hint); padding:20px;">
-            Нет заказов с этим статусом
-          </p>
+          <div class="empty-state">Нет заказов с этим статусом</div>
         `;
         return;
       }
@@ -801,8 +901,9 @@
       });
       
       html += `
-        <div class="table-summary">
-          <div class="table-summary-item">${totalItemsAll} шт. / ${totalAmountAll.toLocaleString('ru-RU')} ₽</div>
+        <div class="status-summary">
+          <div class="status-total">${totalAmountAll.toLocaleString('ru-RU')} ₽</div>
+          <div class="status-items-count">${totalItemsAll} шт.</div>
         </div>
       `;
       
@@ -863,51 +964,68 @@
           // Показываем ПВЗ только если есть товары
           if (group.totalCount > 0) {
             html += `
-              <div class="table-container">
-                <div class="table-header">
-                  <span>${pvz}</span>
-                  <span>${group.totalCount} шт. / ${group.totalSum.toLocaleString('ru-RU')} ₽</span>
+              <div class="pvz-block">
+                <div class="pvz-header">
+                  <div class="pvz-title">${pvz}</div>
+                  <div class="pvz-summary">${group.totalCount} шт. / ${group.totalSum.toLocaleString('ru-RU')} ₽</div>
                 </div>
             `;
             
             // Оплаченные товары
             if (group.paid.count > 0) {
               html += `
-                <div class="payment-section">
-                  <div class="payment-header">${group.paid.count} шт. / ${group.paid.sum.toLocaleString('ru-RU')} ₽</div>
+                <div class="payment-group">
+                  <div class="payment-header paid">
+                    <span>${group.paid.count} шт.</span>
+                    <span>${group.paid.sum.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                  <div class="positions-list">
               `;
               
               Object.entries(group.paid.positions).forEach(([position, data]) => {
                 html += `
-                  <div class="table-row" style="padding: 8px 16px;">
-                    <div class="table-cell table-cell-name">${position}</div>
-                    <div class="table-cell table-cell-count">${data.count} шт.</div>
-                    <div class="table-cell table-cell-amount">${data.sum.toLocaleString('ru-RU')} ₽</div>
+                  <div class="position-item">
+                    <div class="position-name">${position}</div>
+                    <div class="position-details">
+                      <div class="position-count">${data.count} шт.</div>
+                      <div class="position-amount">${data.sum.toLocaleString('ru-RU')} ₽</div>
+                    </div>
                   </div>
                 `;
               });
               
-              html += `</div>`;
+              html += `</div></div>`;
             }
             
             // Неоплаченные товары
             if (group.unpaid.count > 0) {
+              // Добавляем разделитель, если есть оплаченные
+              if (group.paid.count > 0) {
+                html += `<hr class="divider">`;
+              }
+              
               html += `
-                <div class="payment-section payment-unpaid">
-                  <div class="payment-header">${group.unpaid.count} шт. / ${group.unpaid.sum.toLocaleString('ru-RU')} ₽</div>
+                <div class="payment-group">
+                  <div class="payment-header unpaid">
+                    <span>${group.unpaid.count} шт.</span>
+                    <span>${group.unpaid.sum.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                  <div class="positions-list">
               `;
               
               Object.entries(group.unpaid.positions).forEach(([position, data]) => {
                 html += `
-                  <div class="table-row" style="padding: 8px 16px;">
-                    <div class="table-cell table-cell-name">${position}</div>
-                    <div class="table-cell table-cell-count">${data.count} шт.</div>
-                    <div class="table-cell table-cell-amount">${data.sum.toLocaleString('ru-RU')} ₽</div>
+                  <div class="position-item">
+                    <div class="position-name">${position}</div>
+                    <div class="position-details">
+                      <div class="position-count">${data.count} шт.</div>
+                      <div class="position-amount">${data.sum.toLocaleString('ru-RU')} ₽</div>
+                    </div>
                   </div>
                 `;
               });
               
-              html += `</div>`;
+              html += `</div></div>`;
             }
             
             html += `</div>`;
@@ -934,20 +1052,21 @@
           positionGroups[position].totalSum += sum;
         });
 
-        // Создаем таблицу
-        html += `<div class="table-container">`;
-        
+        // Создаем блоки для каждой позиции
         Object.entries(positionGroups).forEach(([position, data]) => {
           html += `
-            <div class="table-row">
-              <div class="table-cell table-cell-name">${position}</div>
-              <div class="table-cell table-cell-count">${data.count} шт.</div>
-              <div class="table-cell table-cell-amount">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
+            <div class="position-block">
+              <div class="position-block-header">
+                <div class="position-block-name">${position}</div>
+                <div class="position-block-total">${data.totalSum.toLocaleString('ru-RU')} ₽</div>
+              </div>
+              <div class="position-block-details">
+                <span>${data.count} шт.</span>
+                <span>${(data.totalSum / data.count).toLocaleString('ru-RU')} ₽/шт</span>
+              </div>
             </div>
           `;
         });
-        
-        html += `</div>`;
       }
 
       statusDetails.innerHTML = html;
@@ -1001,7 +1120,7 @@
         allOrders = data.orders || [];
 
         if (!allOrders || allOrders.length === 0) {
-          statusSelection.innerHTML = '<p style="text-align:center; color:var(--hint);">Заказов пока нет</p>';
+          statusSelection.innerHTML = '<div class="empty-state">Заказов пока нет</div>';
           return;
         }
 
@@ -1020,7 +1139,7 @@
         renderStatusSelectionFromCache();
 
       } catch (err) {
-        statusSelection.innerHTML = '<p style="color:red; text-align:center;">Ошибка загрузки</p>';
+        statusSelection.innerHTML = '<div class="empty-state" style="color:red;">Ошибка загрузки данных</div>';
       }
     }
 
@@ -1028,7 +1147,7 @@
       const statusSelection = document.getElementById('status-selection');
       
       if (Object.keys(statusGroupsCache).length === 0) {
-        statusSelection.innerHTML = '<p style="text-align:center; color:var(--hint);">Заказов пока нет</p>';
+        statusSelection.innerHTML = '<div class="empty-state">Заказов пока нет</div>';
         return;
       }
 
@@ -1119,10 +1238,10 @@
       } catch (err) {
         console.error('Ошибка загрузки аналитики:', err);
         analyticsContent.innerHTML = `
-          <p style="color:red; text-align:center; padding:20px;">
+          <div class="empty-state" style="color:red;">
             Ошибка загрузки аналитики<br>
             <small>${err.message}</small>
-          </p>
+          </div>
         `;
       }
     }
