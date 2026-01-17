@@ -645,12 +645,31 @@
           throw new Error('Неполные данные от сервера');
         }
 
-        document.getElementById('in-transit-paid').textContent = data.inTransitPaid + ' ₽';
-        document.getElementById('in-pvz-paid').textContent = data.inPvzPaid + ' ₽';
-        document.getElementById('received-total').textContent = data.receivedTotal + ' ₽';
-        document.getElementById('sent-total').textContent = data.sentTotal + ' ₽';
-        document.getElementById('market-warehouse-total').textContent = data.marketWarehouseTotal + ' ₽';
-        document.getElementById('total-amount').textContent = data.totalAmount + ' ₽';
+        // Получаем элементы и проверяем их существование
+        const elements = {
+          'in-transit-paid': document.getElementById('in-transit-paid'),
+          'in-pvz-paid': document.getElementById('in-pvz-paid'),
+          'received-total': document.getElementById('received-total'),
+          'sent-total': document.getElementById('sent-total'),
+          'market-warehouse-total': document.getElementById('market-warehouse-total'),
+          'total-amount': document.getElementById('total-amount')
+        };
+
+        // Проверяем, что все элементы найдены
+        for (const [id, element] of Object.entries(elements)) {
+          if (!element) {
+            console.error(`Элемент с id="${id}" не найден на странице`);
+            throw new Error(`Ошибка отображения: элемент ${id} не найден`);
+          }
+        }
+
+        // Устанавливаем значения
+        elements['in-transit-paid'].textContent = data.inTransitPaid + ' ₽';
+        elements['in-pvz-paid'].textContent = data.inPvzPaid + ' ₽';
+        elements['received-total'].textContent = data.receivedTotal + ' ₽';
+        elements['sent-total'].textContent = data.sentTotal + ' ₽';
+        elements['market-warehouse-total'].textContent = data.marketWarehouseTotal + ' ₽';
+        elements['total-amount'].textContent = data.totalAmount + ' ₽';
 
       } catch (err) {
         console.error('Ошибка загрузки аналитики:', err);
