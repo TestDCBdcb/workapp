@@ -2,7 +2,7 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const crypto = require('crypto');
 
-// Кэш авторизации (один раз на запуск функции)
+// Кэш авторизации
 let doc = null;
 
 async function getDoc() {
@@ -69,10 +69,26 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: 'Invalid initData signature' };
     }
 
-    // Самое простое и надёжное добавление в конец таблицы
+    // Получаем актуальное количество строк (включая заголовок)
+    const currentRowCount = sheet.rowCount;
+
+    // Всегда добавляем в конец, начиная с индекса currentRowCount
+    const insertStart = currentRowCount; // после последней строки
+
+    // Вставляем новые строки (с inheritFromBefore для копирования форматирования, если возможно)
+    await sheet.insertDimension('ROWS', {
+      sheetId: sheet.sheetId,
+      dimension: {
+        startIndex: insertStart,
+        endIndex: insertStart + rows.length
+      },
+      inheritFromBefore: true // копирует форматирование из предыдущей строки (если есть)
+    });
+
+    // Заполняем значения в новых строках
     await sheet.addRows(rows);
 
-    console.log(`Успешно добавлено ${rows.length} строк в конец таблицы`);
+    console.log(`Успешно добавлено ${rows.length} строк в конец таблицы (rowCount был ${currentRowCount})`);
 
     return {
       statusCode: 200,
