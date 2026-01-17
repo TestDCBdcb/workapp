@@ -52,10 +52,6 @@ exports.handler = async (event) => {
     const doc = await getDoc();
     const sheet = doc.sheetsByIndex[0];
 
-    // Загружаем информацию о листе, чтобы получить актуальное количество строк
-    await sheet.loadCells('A1:Z1');
-    await sheet.loadHeaderRow(); // Загружаем заголовки
-
     const body = JSON.parse(event.body || '{}');
     const { initData, rows } = body;
 
@@ -74,55 +70,116 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: 'Invalid initData signature' };
     }
 
-    // Получаем текущие строки, чтобы понять, где последняя заполненная строка
-    const currentRows = await sheet.getRows();
-    console.log(`Текущее количество строк: ${currentRows.length}`);
+    // Получаем заголовки таблицы, чтобы понять структуру столбцов
+    await sheet.loadHeaderRow();
+    const headers = sheet.headerValues;
+    console.log('Заголовки таблицы:', headers);
     
-    // Начинаем вставку после последней строки
-    const startRowIndex = currentRows.length + 1; // +1 потому что заголовок в строке 1
+    // Сопоставление данных с заголовками таблицы
+    // На основе вашей структуры:
+    // Магазин (0), Номер заказа (1), Аккаунт (2), Дата заказа (3), Позиция (4), 
+    // Адрес ПВЗ (8), Статус (10), Оплата (11), Цена товара (22), Количество (23), Сумма (24)
     
-    // Подготавливаем данные для вставки
-    const valuesToInsert = rows.map(row => [
-      row['Магазин'] || '',
-      row['Номер заказа'] || '',
-      row['Аккаунт'] || '',
-      row['Дата заказа'] || '',
-      row['Позиция'] || '',
-      row['Адрес ПВЗ'] || '',
-      row['Статус'] || 'В пути',
-      row['Оплата'] || '',
-      row['Цена товара'] || 0,
-      row['Количество'] || 1,
-      row['Сумма'] || 0
-    ]);
+    // Создаем маппинг названий столбцов к их индексам
+    const columnMapping = {};
+    headers.forEach((header, index) => {
+      columnMapping[header.trim()] = index;
+    });
     
-    // Определяем диапазон для вставки
-    const startRow = startRowIndex + 1; // +1 потому что sheet.getRows() возвращает строки без заголовка
-    const endRow = startRow + rows.length - 1;
+    console.log('Маппинг столбцов:', columnMapping);
     
-    // Вставляем строки с использованием setValuesInRange
-    await sheet.loadCells(`A${startRow}:K${endRow}`);
-    
-    // Заполняем ячейки
-    for (let i = 0; i < rows.length; i++) {
-      const rowData = valuesToInsert[i];
-      const rowNum = startRow + i;
-      
-      for (let col = 0; col < rowData.length; col++) {
-        const cell = sheet.getCell(rowNum - 1, col); // -1 потому что нумерация с 0
-        cell.value = rowData[col];
+    // Проверяем наличие необходимых столбцов
+    const requiredColumns = ['Магазин', 'Аккаунт', 'Дата заказа', 'Позиция', 'Адрес ПВЗ', 'Статус', 'Оплата', 'Цена товара', 'Количество', 'Сумма'];
+    for (const col of requiredColumns) {
+      if (columnMapping[col] === undefined) {
+        console.warn(`Колонка "${col}" не найдена в таблице`);
       }
     }
     
-    // Сохраняем изменения
-    await sheet.saveUpdatedCells();
+    // Получаем текущие строки для определения, куда вставлять
+    const currentRows = await sheet.getRows();
+    const startRow = currentRows.length + 2; // +2: +1 для заголовка, +1 для следующей строки
+    console.log(`Начинаем вставку с строки ${startRow}`);
     
-    console.log(`Успешно добавлено ${rows.length} строк, начиная со строки ${startRow}`);
+    // Подготавливаем данные для вставки
+    for (let i = 0; i < rows.length; i++) {
+      const rowData = rows[i];
+      const rowIndex = startRow + i - 1; // -1 потому что loadCells использует 0-based индексацию
+      
+      // Загружаем ячейки для этой строки
+      await sheet.loadCells(`A${startRow + i}:Z${startRow + i}`);
+      
+      // Заполняем только нужные столбцы
+      if (columnMapping['Магазин'] !== undefined) {
+        const cell = sheet.getCell(rowIndex, columnMapping['Магазин']);
+        cell.value = rowData['Магазин'] || '';
+      }
+      
+      if (columnMapping['Номер заказа'] !== undefined) {
+        const cell = sheet.getCell(rowIndex, columnMapping['Номер заказа']);
+        cell.value = rowData['Номер заказа'] || '';
+      }
+      
+      if (columnMapping['Аккаунт'] !== undefined) {
+        const cell = sheet.getCell(rowIndex, columnMapping['Аккаунт']);
+        cell.value = rowData['Аккаунт'] || '';
+      }
+      
+      if (columnMapping['Дата заказа'] !== undefined) {
+        const cell = sheet.getCell(rowIndex, columnMapping['Дата заказа']);
+        cell.value = rowData['Дата заказа'] || '';
+      }
+      
+      if (columnMapping['Позиция'] !== undefined) {
+        const cell = sheet.getCell(rowIndex, columnMapping['Позиция']);
+        cell.value = rowData['Позиция'] || '';
+      }
+      
+      if (columnMapping['Адрес ПВЗ'] !== undefined) {
+        const cell = sheet.getCell(rowIndex, columnMapping['Адрес ПВЗ']);
+        cell.value = rowData['Адрес ПВЗ'] || '';
+      }
+      
+      if (columnMapping['Статус'] !== undefined) {
+        const cell = sheet.getCell(rowIndex, columnMapping['Статус']);
+        cell.value = rowData['Статус'] || 'В пути';
+      }
+      
+      if (columnMapping['Оплата'] !== undefined) {
+        const cell = sheet.getCell(rowIndex, columnMapping['Оплата']);
+        cell.value = rowData['Оплата'] || '';
+      }
+      
+      if (columnMapping['Цена товара'] !== undefined) {
+        const cell = sheet.getCell(rowIndex, columnMapping['Цена товара']);
+        cell.value = rowData['Цена товара'] || 0;
+      }
+      
+      if (columnMapping['Количество'] !== undefined) {
+        const cell = sheet.getCell(rowIndex, columnMapping['Количество']);
+        cell.value = rowData['Количество'] || 1;
+      }
+      
+      if (columnMapping['Сумма'] !== undefined) {
+        const cell = sheet.getCell(rowIndex, columnMapping['Сумма']);
+        cell.value = rowData['Сумма'] || 0;
+      }
+      
+      console.log(`Подготовлена строка ${startRow + i}:`, {
+        Магазин: rowData['Магазин'],
+        Позиция: rowData['Позиция'],
+        Сумма: rowData['Сумма']
+      });
+    }
+    
+    // Сохраняем все изменения
+    await sheet.saveUpdatedCells();
+    console.log(`Успешно добавлено ${rows.length} строк`);
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ success: true, count: rows.length, startRow })
+      body: JSON.stringify({ success: true, count: rows.length })
     };
   } catch (err) {
     console.error('Ошибка add-order:', err.message, err.stack);
