@@ -85,7 +85,9 @@ exports.handler = async (event) => {
     rows.forEach(row => {
       const status = (row.get('Статус') || '').toLowerCase().trim();
       const payment = (row.get('Оплата') || '').toLowerCase().trim();
-      const sum = parseFloat(row.get('Сумма') || 0) || 0;
+      const sumStr = row.get('Сумма') || '0';
+      // Преобразуем строку в число, удаляя пробелы и заменяя запятые на точки
+      const sum = parseFloat(sumStr.toString().replace(/\s+/g, '').replace(',', '.')) || 0;
 
       // Проверяем условия по вашим правилам:
       
@@ -120,7 +122,7 @@ exports.handler = async (event) => {
       }
     });
 
-    // Форматируем суммы
+    // Форматируем суммы для отображения (с пробелами для читаемости)
     const formatSum = (sum) => {
       return sum.toLocaleString('ru-RU', {
         minimumFractionDigits: 2,
