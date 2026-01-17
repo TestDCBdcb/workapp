@@ -244,32 +244,41 @@
       transform: rotate(180deg);
     }
 
-    /* Стили для табличной структуры в списках */
+    /* Минималистичные стили для таблиц */
     .table-container {
       background: var(--card);
       border-radius: 20px;
-      padding: 20px;
+      padding: 0;
       margin-bottom: 16px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      overflow: hidden;
     }
 
     .table-header {
       font-size: 20px;
       font-weight: 600;
       color: var(--accent);
-      margin-bottom: 20px;
+      padding: 20px;
       text-align: center;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
     }
 
-    .table-total {
+    .table-summary {
       font-size: 18px;
       font-weight: 600;
       color: var(--accent);
+      padding: 16px;
       text-align: center;
-      margin-bottom: 20px;
-      padding: 12px;
-      background: rgba(0,136,204,0.1);
-      border-radius: 12px;
+      background: rgba(0,136,204,0.05);
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .table-summary-item {
+      margin-bottom: 8px;
+    }
+
+    .table-summary-item:last-child {
+      margin-bottom: 0;
     }
 
     .table-row {
@@ -304,38 +313,44 @@
       color: var(--accent);
     }
 
-    /* Стили для ПВЗ с подразделами оплаты */
-    .pvz-table-container {
+    /* Стили для ПВЗ */
+    .pvz-container {
       background: var(--card);
       border-radius: 20px;
-      padding: 20px;
+      padding: 0;
       margin-bottom: 16px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      overflow: hidden;
     }
 
     .pvz-header {
       font-size: 20px;
       font-weight: 600;
       color: var(--accent);
-      margin-bottom: 20px;
+      padding: 20px;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
-    .pvz-total {
+    .pvz-summary {
       font-size: 18px;
       font-weight: 600;
       color: var(--accent);
+      padding: 16px;
       text-align: center;
-      margin-bottom: 20px;
-      padding: 12px;
-      background: rgba(0,136,204,0.1);
-      border-radius: 12px;
+      background: rgba(0,136,204,0.05);
+      border-bottom: 1px solid rgba(0,0,0,0.1);
     }
 
     .payment-section {
-      margin-bottom: 20px;
+      padding: 16px;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .payment-section:last-child {
+      border-bottom: none;
     }
 
     .payment-header {
@@ -664,7 +679,7 @@
       document.getElementById('orders-list').style.display = 'none';
       document.getElementById('analytics-section').style.display = 'none';
       document.getElementById('status').textContent = '';
-      document.querySelector('.progress').style.display = 'flex'; // Показываем прогресс бар
+      document.querySelector('.progress').style.display = 'flex';
       renderStep();
       updateProgress();
       document.getElementById('backBtn').style.visibility = 'hidden';
@@ -773,7 +788,7 @@
       analytics.style.display = 'none';
       list.style.display = list.style.display === 'block' ? 'none' : 'block';
       document.getElementById('add-form').style.display = 'none';
-      document.querySelector('.progress').style.display = 'none'; // Скрываем прогресс бар
+      document.querySelector('.progress').style.display = 'none';
       
       if (list.style.display === 'block') {
         showStatusSelection();
@@ -785,7 +800,7 @@
       const list = document.getElementById('orders-list');
       list.style.display = 'none';
       document.getElementById('add-form').style.display = 'none';
-      document.querySelector('.progress').style.display = 'none'; // Скрываем прогресс бар
+      document.querySelector('.progress').style.display = 'none';
       analytics.style.display = analytics.style.display === 'block' ? 'none' : 'block';
       
       if (analytics.style.display === 'block') {
@@ -809,7 +824,6 @@
         </div>
       `;
 
-      // Используем setTimeout для асинхронной отрисовки без блокировки UI
       setTimeout(() => {
         renderStatusDetails(status);
       }, 10);
@@ -841,14 +855,6 @@
       if (shouldGroupByPvz) {
         // Для ПВЗ и "В пути" группируем по адресу ПВЗ
         const pvzGroups = {};
-        const allPvzAddresses = new Set();
-        
-        // Сначала собираем все уникальные адреса ПВЗ
-        allOrders.forEach(order => {
-          if (order['Адрес ПВЗ']) {
-            allPvzAddresses.add(order['Адрес ПВЗ']);
-          }
-        });
         
         // Группируем заказы по ПВЗ и оплате
         filteredOrders.forEach(order => {
@@ -906,12 +912,11 @@
           });
         });
 
-        // Общая статистика по статусу
+        // Общая статистика по статусу (минималистичная)
         html += `
-          <div class="table-total">
-            Всего: ${totalItemsAll} шт. на сумму ${totalAmountAll.toLocaleString('ru-RU')} ₽<br>
-            Оплачено: ${totalPaidItemsAll} шт. на сумму ${totalPaidAmountAll.toLocaleString('ru-RU')} ₽<br>
-            Не оплачено: ${totalUnpaidItemsAll} шт. на сумму ${totalUnpaidAmountAll.toLocaleString('ru-RU')} ₽
+          <div class="table-summary">
+            <div class="table-summary-item">${totalItemsAll} шт. / ${totalAmountAll.toLocaleString('ru-RU')} ₽</div>
+            <div class="table-summary-item">Оплачено: ${totalPaidItemsAll} шт. / ${totalPaidAmountAll.toLocaleString('ru-RU')} ₽</div>
           </div>
         `;
 
@@ -929,13 +934,13 @@
           if (totalPaidItems > 0 || totalUnpaidItems > 0) {
             hasItems = true;
             html += `
-              <div class="pvz-table-container">
+              <div class="pvz-container">
                 <div class="pvz-header">
                   <span>${pvz}</span>
                   <span>${totalPaidItems + totalUnpaidItems} шт.</span>
                 </div>
-                <div class="pvz-total">
-                  Всего: ${totalPaidItems + totalUnpaidItems} шт. на сумму ${(totalPaidSum + totalUnpaidSum).toLocaleString('ru-RU')} ₽
+                <div class="pvz-summary">
+                  ${totalPaidItems + totalUnpaidItems} шт. / ${(totalPaidSum + totalUnpaidSum).toLocaleString('ru-RU')} ₽
                 </div>
             `;
             
@@ -944,8 +949,8 @@
               html += `
                 <div class="payment-section payment-paid">
                   <div class="payment-header">
-                    <span>Оплаченные</span>
-                    <span>${totalPaidItems} шт. • ${totalPaidSum.toLocaleString('ru-RU')} ₽</span>
+                    <span>Оплачено</span>
+                    <span>${totalPaidItems} шт. / ${totalPaidSum.toLocaleString('ru-RU')} ₽</span>
                   </div>
               `;
               
@@ -967,8 +972,8 @@
               html += `
                 <div class="payment-section payment-unpaid">
                   <div class="payment-header">
-                    <span>Неоплаченные</span>
-                    <span>${totalUnpaidItems} шт. • ${totalUnpaidSum.toLocaleString('ru-RU')} ₽</span>
+                    <span>Не оплачено</span>
+                    <span>${totalUnpaidItems} шт. / ${totalUnpaidSum.toLocaleString('ru-RU')} ₽</span>
                   </div>
               `;
               
@@ -1019,8 +1024,8 @@
         const totalAmount = Object.values(positionGroups).reduce((sum, data) => sum + data.totalSum, 0);
         
         html += `
-          <div class="table-total">
-            Всего: ${totalItems} шт. на сумму ${totalAmount.toLocaleString('ru-RU')} ₽
+          <div class="table-summary">
+            <div class="table-summary-item">${totalItems} шт. / ${totalAmount.toLocaleString('ru-RU')} ₽</div>
           </div>
         `;
 
@@ -1073,7 +1078,6 @@
       `;
       document.getElementById('backBtn').style.visibility = 'hidden';
 
-      // Если данные уже загружены, используем кэш
       if (Object.keys(statusGroupsCache).length > 0) {
         renderStatusSelectionFromCache();
         return;
@@ -1106,10 +1110,8 @@
           statusGroups[status].push(order);
         });
         
-        // Сохраняем в кэш
         statusGroupsCache = statusGroups;
         
-        // Отображаем из кэша
         renderStatusSelectionFromCache();
 
       } catch (err) {
@@ -1127,7 +1129,6 @@
 
       let html = '<div class="step-title">Выберите статус</div>';
       
-      // Создаем карточки для каждого статуса из кэша
       Object.entries(statusGroupsCache).forEach(([status, orders]) => {
         const count = orders.length;
         html += `
@@ -1165,14 +1166,12 @@
         const data = await res.json();
         console.log('Данные аналитики:', data);
 
-        // Проверяем, что все нужные поля присутствуют
         if (data.inTransitPaid === undefined || data.inPvzPaid === undefined || 
             data.receivedTotal === undefined || data.sentTotal === undefined || 
             data.marketWarehouseTotal === undefined || data.totalAmount === undefined) {
           throw new Error('Неполные данные от сервера');
         }
 
-        // Создаем HTML для аналитики с выезжающими деталями
         const analyticsHTML = `
           <div class="analytics-main-card" id="analytics-main-card" onclick="toggleAnalyticsDetails()">
             <div class="analytics-main-title">
